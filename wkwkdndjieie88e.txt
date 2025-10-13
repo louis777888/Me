@@ -35,7 +35,7 @@ local Window = WindUI:CreateWindow({
     Size = UDim2.fromOffset(560, 350),
 
     -- 🖼 Background
-    Background = "https://cdn.discordapp.com/attachments/1427347866523009166/1427350570821222411/1240551.jpg?ex=68ee8b4e&is=68ed39ce&hm=6b87bd22b9f7590fae0862e2d4704c79989380cf6f56db85e3055fe481c055c6&.png",
+    Background = "https://cdn.discordapp.com/attachments/1427347866523009166/1427372951736684584/Picsart_25-10-14_02-07-46-199.jpg?ex=68eea027&is=68ed4ea7&hm=7b01987edbbb87409f625abd57aa6711b46db20f35772e3b89a7fa1c072e60a9&.png",
     BackgroundImageTransparency = 0.25,
     HidePanelBackground = false,
     SideBarWidth = 200,
