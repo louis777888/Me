@@ -1,0 +1,2192 @@
+-- 🚀 Load WindUI versi terbaru
+local WindUI = loadstring(game:HttpGet("https://github.com/Footagesus/WindUI/releases/latest/download/main.lua"))()
+
+-- 🌈 Fungsi teks gradient (3 warna lembut)
+local function GradientText(text, colors)
+    local result = ""
+    local length = #text
+    for i = 1, length do
+        local t = (i - 1) / math.max(length - 1, 1)
+        local colorIndex = math.floor(t * (#colors - 1)) + 1
+        local nextIndex = math.clamp(colorIndex + 1, 1, #colors)
+        local ratio = (t * (#colors - 1)) % 1
+
+        local c1, c2 = colors[colorIndex], colors[nextIndex]
+        local r = math.floor((c1.R + (c2.R - c1.R) * ratio) * 255)
+        local g = math.floor((c1.G + (c2.G - c1.G) * ratio) * 255)
+        local b = math.floor((c1.B + (c2.B - c1.B) * ratio) * 255)
+        result ..= string.format('<font color="rgb(%d,%d,%d)">%s</font>', r, g, b, text:sub(i, i))
+    end
+    return result
+end
+
+-- 💖 Gradient: Pink → Ungu → Biru muda
+local galaxyGradient = { 
+Color3.fromRGB(180,0,255), Color3.fromRGB(0,255,255)
+}
+
+-- 🌌 Buat Window utama
+local Window = WindUI:CreateWindow({
+    Title = GradientText("LS Hub Galaxy", galaxyGradient),
+    Icon = "sparkles",
+    Author = "made by @louissxe | discord.gg/Ntm5KyTN5",
+    Folder = "LS Hub Galaxy",
+    Theme = "Dark",
+    Size = UDim2.fromOffset(560, 350),
+
+    -- 🖼 Background
+    Background = "https://cdn.discordapp.com/attachments/1427347866523009166/1427350570821222411/1240551.jpg?ex=68ee8b4e&is=68ed39ce&hm=6b87bd22b9f7590fae0862e2d4704c79989380cf6f56db85e3055fe481c055c6&.png",
+    BackgroundImageTransparency = 0.25,
+    HidePanelBackground = false,
+    SideBarWidth = 200,
+    ToggleKey = Enum.KeyCode.G,
+
+    User = {
+        Enabled = true,
+        Anonymous = true,
+        Callback = function()
+            WindUI:Notify({
+                Title = GradientText("User ID", galaxyGradient),
+                Content = "You opened your profile panel.",
+                Duration = 3
+            })
+        end,
+    },
+})
+
+-- 🔔 Notifikasi saat UI terbuka
+WindUI:Notify({
+    Title = GradientText("Welcome To LS Hub Galaxy", galaxyGradient),
+    Content = "Welcome back, explorer!",
+    Duration = 4
+})
+
+-- 🏠 TAB HOME
+local HomeTab = Window:Tab({
+    Title = GradientText("Home", galaxyGradient),
+    Icon = "house",
+})
+
+HomeTab:Paragraph({
+    Title = GradientText("Welcome To LS Hub Galaxy", galaxyGradient),
+    Desc = "UI with a cosmic black & white galaxy theme",
+})
+
+-- 📰 Changelog / Update Info
+HomeTab:Paragraph({
+    Title = GradientText("Information", galaxyGradient),
+    Desc = "✅ Bypass Fly Mode\n" ..
+           "✅ ESP dengan Avatar & Healthbar\n" ..
+           "✅ Warp System lebih stabil\n" ..
+           "✅ UI performa meningkat 40%",
+})
+
+-- ▶️ Tiktok Showcase
+HomeTab:Button({
+    Title = GradientText("TikTok Showcase", galaxyGradient),
+    Desc = "Lihat demo LS Hub on TikTok",
+    Callback = function()
+        pcall(function()
+            setclipboard("https://youtube.com/@lsxvoid")
+            print("TikTok link copied!")
+        end)
+    end,
+})
+
+-- ⚡ TAB UTAMA (MAIN)
+local MainTab = Window:Tab({
+    Title = GradientText("Main", galaxyGradient),
+    Icon = "bird",
+})
+
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local LocalPlayer = Players.LocalPlayer
+local camera = workspace.CurrentCamera
+local CoreGui = game:GetService("CoreGui")
+
+-- ====== FLY MODE ======
+local flying = false
+local flySpeed = 50
+local bodyGyro, bodyVel
+local goingUp, goingDown = false, false
+local flyUI
+
+-- Toggle Fly Mode (Sekarang di TAB MAIN)
+MainTab:Toggle({
+    Title = GradientText("Fly Mode", galaxyGradient),
+    Default = false,
+    Callback = function(state)
+        flying = state
+        local char = LocalPlayer.Character
+        if not char or not char:FindFirstChild("HumanoidRootPart") then return end
+        local hrp = char.HumanoidRootPart
+
+        if flying then
+            -- ====== Buat UI tombol naik/turun ======
+            flyUI = Instance.new("ScreenGui")
+            flyUI.Name = "FlyUI"
+            flyUI.Parent = CoreGui
+
+            local function createButton(text, position)
+                local btn = Instance.new("TextButton")
+                btn.Size = UDim2.new(0, 60, 0, 60)
+                btn.Position = position
+                btn.Text = text
+                btn.Font = Enum.Font.GothamBold
+                btn.TextSize = 30
+                btn.TextColor3 = Color3.fromRGB(255,255,255)
+                btn.BackgroundColor3 = Color3.fromRGB(30,30,30)
+                btn.BackgroundTransparency = 0.1
+                btn.BorderSizePixel = 0
+                btn.Parent = flyUI
+
+                local corner = Instance.new("UICorner")
+                corner.CornerRadius = UDim.new(0,12)
+                corner.Parent = btn
+
+                return btn
+            end
+
+            local upButton = createButton("↑", UDim2.new(1, -70, 0.5, -80))
+            upButton.MouseButton1Down:Connect(function() goingUp = true end)
+            upButton.MouseButton1Up:Connect(function() goingUp = false end)
+
+            local downButton = createButton("↓", UDim2.new(1, -70, 0.5, 20))
+            downButton.MouseButton1Down:Connect(function() goingDown = true end)
+            downButton.MouseButton1Up:Connect(function() goingDown = false end)
+
+            -- ====== Buat BodyGyro & BodyVelocity ======
+            bodyGyro = Instance.new("BodyGyro")
+            bodyGyro.P = 9e4
+            bodyGyro.MaxTorque = Vector3.new(9e9, 9e9, 9e9)
+            bodyGyro.CFrame = hrp.CFrame
+            bodyGyro.Parent = hrp
+
+            bodyVel = Instance.new("BodyVelocity")
+            bodyVel.Velocity = Vector3.zero
+            bodyVel.MaxForce = Vector3.new(9e9, 9e9, 9e9)
+            bodyVel.Parent = hrp
+
+            -- ====== Fly loop ======
+            RunService:BindToRenderStep("FlyMobile", Enum.RenderPriority.Character.Value + 1, function()
+                if not flying then return end
+                local humanoid = LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
+                if not humanoid then return end
+                local moveDir = humanoid.MoveDirection
+
+                local velocity = Vector3.zero
+                if moveDir.Magnitude > 0 then
+                    velocity = Vector3.new(moveDir.X, 0, moveDir.Z)
+                    velocity = velocity.Unit * flySpeed
+                end
+
+                if goingUp then
+                    velocity = velocity + Vector3.new(0, flySpeed, 0)
+                elseif goingDown then
+                    velocity = velocity + Vector3.new(0, -flySpeed, 0)
+                end
+
+                bodyVel.Velocity = velocity
+
+                local lookPos = hrp.Position + Vector3.new(camera.CFrame.LookVector.X, 0, camera.CFrame.LookVector.Z)
+                bodyGyro.CFrame = CFrame.new(hrp.Position, lookPos)
+            end)
+        else
+            -- ====== Fly OFF ======
+            RunService:UnbindFromRenderStep("FlyMobile")
+            if bodyGyro then bodyGyro:Destroy() end
+            if bodyVel then bodyVel:Destroy() end
+            if flyUI then flyUI:Destroy() end
+            goingUp, goingDown = false, false
+        end
+    end,
+})
+
+-- Slider Kecepatan Fly (Sekarang di TAB MAIN)
+MainTab:Slider({
+    Title = GradientText("Fly Speed", galaxyGradient),
+    Step = 1,
+    Value = { Min = 10, Max = 200, Default = 50 },
+    Callback = function(value)
+        flySpeed = value
+        print("Fly speed diatur ke:", value)
+    end,
+})
+
+-- 🦘 Infinite Jump (Lompatan Tak Terbatas)
+local infJumpEnabled = false
+MainTab:Toggle({
+    Title = GradientText("Infinite Jump", galaxyGradient),
+    Default = false,
+    Callback = function(state)
+        infJumpEnabled = state
+        local UIS = game:GetService("UserInputService")
+        UIS.JumpRequest:Connect(function()
+            if infJumpEnabled then
+                local player = game.Players.LocalPlayer
+                if player and player.Character and player.Character:FindFirstChildOfClass("Humanoid") then
+                    player.Character:FindFirstChildOfClass("Humanoid"):ChangeState(Enum.HumanoidStateType.Jumping)
+                end
+            end
+        end)
+        print("Infinite Jump:", state)
+    end
+})
+
+-- 🏃 WalkSpeed Permanen dengan Toggle
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local LocalPlayer = Players.LocalPlayer
+
+local CurrentWalkSpeed = 16
+local PermanentSpeed = false -- Toggle On/Off
+local LastHumanoid
+
+-- Slider UI
+MainTab:Slider({
+    Title = GradientText("WalkSpeed", galaxyGradient),
+    Step = 1,
+    Value = {
+        Min = 10,
+        Max = 100,
+        Default = 16,
+    },
+    Callback = function(value)
+        CurrentWalkSpeed = math.floor(value)
+        -- Langsung apply ke humanoid kalau toggle aktif
+        if PermanentSpeed then
+            local char = LocalPlayer.Character
+            if char then
+                local humanoid = char:FindFirstChildOfClass("Humanoid")
+                if humanoid then
+                    humanoid.WalkSpeed = CurrentWalkSpeed
+                end
+            end
+        end
+        print("WalkSpeed:", CurrentWalkSpeed)
+    end
+})
+
+-- Toggle UI
+MainTab:Toggle({
+    Title = GradientText("PermanentSpeed", galaxyGradient),
+    Default = false,
+    Callback = function(value)
+        PermanentSpeed = value
+        local char = LocalPlayer.Character
+        if char then
+            local humanoid = char:FindFirstChildOfClass("Humanoid")
+            if humanoid then
+                if PermanentSpeed then
+                    humanoid.WalkSpeed = CurrentWalkSpeed
+                else
+                    humanoid.WalkSpeed = 16 -- Reset ke default
+                end
+            end
+        end
+        print("PermanentSpeed:", PermanentSpeed)
+    end
+})
+
+-- Fungsi apply speed ke humanoid baru
+local function applySpeed(humanoid)
+    if PermanentSpeed and humanoid and humanoid.WalkSpeed ~= CurrentWalkSpeed then
+        humanoid.WalkSpeed = CurrentWalkSpeed
+    end
+end
+
+-- Event respawn
+LocalPlayer.CharacterAdded:Connect(function(char)
+    task.defer(function()
+        local humanoid = char:FindFirstChildOfClass("Humanoid")
+        if humanoid then
+            LastHumanoid = humanoid
+            applySpeed(humanoid)
+        end
+    end)
+end)
+
+-- Heartbeat loop: cek humanoid dan speed
+RunService.Heartbeat:Connect(function()
+    local char = LocalPlayer.Character
+    if not char then return end
+
+    local humanoid = char:FindFirstChildOfClass("Humanoid")
+    if not humanoid then return end
+
+    if humanoid ~= LastHumanoid then
+        LastHumanoid = humanoid
+        applySpeed(humanoid)
+    elseif humanoid.WalkSpeed ~= CurrentWalkSpeed then
+        applySpeed(humanoid)
+    end
+end)
+
+-- Inisialisasi pertama
+if LocalPlayer.Character then
+    local humanoid = LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
+    if humanoid then
+        LastHumanoid = humanoid
+        applySpeed(humanoid)
+    end
+end
+
+-- 🦘 Tinggi Lompatan (Jump Height)
+MainTab:Slider({
+    Title = GradientText("JumpHeight", galaxyGradient),
+    Step = 1,
+    Value = {
+        Min = 20,
+        Max = 200,
+        Default = 50,
+    },
+    Callback = function(value)
+        local player = game.Players.LocalPlayer
+        if player and player.Character and player.Character:FindFirstChildOfClass("Humanoid") then
+            local humanoid = player.Character:FindFirstChildOfClass("Humanoid")
+            -- Gunakan JumpPower jika aktif, kalau tidak pakai JumpHeight
+            if humanoid.UseJumpPower then
+                humanoid.JumpPower = value
+            else
+                humanoid.JumpHeight = value / 10 -- konversi agar terasa sama
+            end
+        end
+        print("Jump Height:", value)
+    end
+})
+
+-- 🎥 Bidang Pandang (Field of View / FOV)
+MainTab:Slider({
+    Title = GradientText("Sudut Pandang", galaxyGradient),
+    Step = 1,
+    Value = {
+        Min = 60,
+        Max = 120,
+        Default = 70,
+    },
+    Callback = function(value)
+        local camera = workspace.CurrentCamera
+        if camera then
+            camera.FieldOfView = value
+        end
+        print("FOV set ke:", value)
+    end
+})
+
+-- 🔁 Tombol Reset Nilai Default
+MainTab:Button({
+    Title = GradientText("Reset Default", galaxyGradient),
+    Callback = function()
+        local player = game.Players.LocalPlayer
+        local camera = workspace.CurrentCamera
+
+        if player and player.Character and player.Character:FindFirstChildOfClass("Humanoid") then
+            local humanoid = player.Character:FindFirstChildOfClass("Humanoid")
+            humanoid.WalkSpeed = 16
+            if humanoid.UseJumpPower then
+                humanoid.JumpPower = 50
+            else
+                humanoid.JumpHeight = 5
+            end
+        end
+
+        if camera then
+            camera.FieldOfView = 70
+        end
+
+        print("Semua nilai dikembalikan ke default!")
+    end
+})
+
+-- 🧰 TOOLS TAB
+local Players = game:GetService("Players")
+local LocalPlayer = Players.LocalPlayer
+
+local ToolsTab = Window:Tab({
+    Title = GradientText("Tools", galaxyGradient),
+    Icon = "cpu",
+})
+
+local shiftLockEnabled = false
+local shiftLockMode = "Back"
+
+-- Toggle Shift Lock di WindUI
+ToolsTab:Toggle({
+    Title = GradientText("Shiftlock", galaxyGradient),
+    Default = false,
+    Callback = function(state)
+        shiftLockEnabled = state
+        LocalPlayer.DevEnableMouseLock = state
+        print("Shift Lock:", state and "ON ✅" or "OFF ❌")
+    end,
+})
+
+-- Dropdown Front/Back Mode di WindUI
+ToolsTab:Dropdown({
+    Title = GradientText("Mode Shiftlock", galaxyGradient),
+    Values = {"Back", "Front"},
+    Default = shiftLockMode,
+    Callback = function(value)
+        shiftLockMode = value
+        print("Shift Lock Mode:", shiftLockMode)
+    end,
+})
+
+-- RenderStep update HumanoidRootPart orientation
+RunService:BindToRenderStep("ShiftLockWindUI", Enum.RenderPriority.Camera.Value + 1, function()
+    if shiftLockEnabled and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
+        local hrp = LocalPlayer.Character.HumanoidRootPart
+        local cam = workspace.CurrentCamera
+        local dir = Vector3.new(cam.CFrame.LookVector.X, 0, cam.CFrame.LookVector.Z)
+        if shiftLockMode == "Front" then
+            dir = -dir
+        end
+        if dir.Magnitude > 0 then
+            hrp.CFrame = CFrame.new(hrp.Position, hrp.Position + dir)
+        end
+    end
+end)
+
+-- ====== ESP V2: Avatar + Rounded HealthBar ======
+local espEnabled = false
+local espConnections = {}
+
+local function createESP(player)
+    if player == LocalPlayer then return end
+    if not player.Character or not player.Character:FindFirstChild("HumanoidRootPart") then return end
+
+    local hrp = player.Character:WaitForChild("HumanoidRootPart")
+    local humanoid = player.Character:FindFirstChildOfClass("Humanoid")
+
+    -- Buat Billboard GUI utama
+    local billboard = Instance.new("BillboardGui")
+    billboard.Name = "LSxESP"
+    billboard.AlwaysOnTop = true
+    billboard.Size = UDim2.new(0, 230, 0, 60)
+    billboard.StudsOffset = Vector3.new(0, 3, 0)
+    billboard.Parent = hrp
+
+    -- Frame utama (background semi transparan)
+    local mainFrame = Instance.new("Frame")
+    mainFrame.Size = UDim2.new(1, 0, 1, 0)
+    mainFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
+    mainFrame.BackgroundTransparency = 0.3
+    mainFrame.BorderSizePixel = 0
+    mainFrame.Parent = billboard
+
+    local cornerMain = Instance.new("UICorner")
+    cornerMain.CornerRadius = UDim.new(0, 8)
+    cornerMain.Parent = mainFrame
+
+    -- Avatar (headshot)
+    local avatar = Instance.new("ImageLabel")
+    avatar.Size = UDim2.new(0, 45, 0, 45)
+    avatar.Position = UDim2.new(0, 5, 0.5, -22)
+    avatar.BackgroundTransparency = 1
+    avatar.Image = "rbxthumb://type=AvatarHeadShot&id=" .. player.UserId .. "&w=100&h=100"
+    avatar.Parent = mainFrame
+
+    local avatarCorner = Instance.new("UICorner")
+    avatarCorner.CornerRadius = UDim.new(1, 0)
+    avatarCorner.Parent = avatar
+
+    -- Nama Player
+    local nameLabel = Instance.new("TextLabel")
+    nameLabel.BackgroundTransparency = 1
+    nameLabel.Size = UDim2.new(1, -60, 0.5, 0)
+    nameLabel.Position = UDim2.new(0, 60, 0, 2)
+    nameLabel.Font = Enum.Font.GothamBold
+    nameLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+    nameLabel.TextStrokeTransparency = 0.5
+    nameLabel.TextScaled = true
+    nameLabel.Text = player.DisplayName .. " (@" .. player.Name .. ")"
+    nameLabel.TextXAlignment = Enum.TextXAlignment.Left
+    nameLabel.Parent = mainFrame
+
+    -- Frame untuk Health Bar
+    local hpFrame = Instance.new("Frame")
+    hpFrame.Size = UDim2.new(1, -75, 0, 10)
+    hpFrame.Position = UDim2.new(0, 60, 1, -15)
+    hpFrame.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+    hpFrame.BorderSizePixel = 0
+    hpFrame.Parent = mainFrame
+
+    local hpCorner = Instance.new("UICorner")
+    hpCorner.CornerRadius = UDim.new(0, 6)
+    hpCorner.Parent = hpFrame
+
+    local hpBar = Instance.new("Frame")
+    hpBar.Size = UDim2.new(1, 0, 1, 0)
+    hpBar.BackgroundColor3 = Color3.fromRGB(0, 255, 100)
+    hpBar.BorderSizePixel = 0
+    hpBar.Parent = hpFrame
+
+    local hpBarCorner = Instance.new("UICorner")
+    hpBarCorner.CornerRadius = UDim.new(0, 6)
+    hpBarCorner.Parent = hpBar
+
+    -- Update HealthBar real-time
+    local conn = RunService.RenderStepped:Connect(function()
+        if not espEnabled or not player.Character or not player.Character:FindFirstChild("Humanoid") then
+            billboard.Enabled = false
+            return
+        end
+        billboard.Enabled = true
+        local health = player.Character.Humanoid.Health
+        local maxHealth = player.Character.Humanoid.MaxHealth
+        hpBar.Size = UDim2.new(math.clamp(health / maxHealth, 0, 1), 0, 1, 0)
+
+        -- Warna HP berubah sesuai health
+        if health / maxHealth > 0.6 then
+            hpBar.BackgroundColor3 = Color3.fromRGB(0, 255, 100)
+        elseif health / maxHealth > 0.3 then
+            hpBar.BackgroundColor3 = Color3.fromRGB(255, 200, 0)
+        else
+            hpBar.BackgroundColor3 = Color3.fromRGB(255, 70, 70)
+        end
+    end)
+
+    espConnections[player] = {gui = billboard, conn = conn}
+end
+
+local function removeESP(player)
+    if espConnections[player] then
+        espConnections[player].conn:Disconnect()
+        if espConnections[player].gui then
+            espConnections[player].gui:Destroy()
+        end
+        espConnections[player] = nil
+    end
+end
+
+local function enableESP()
+    for _, player in ipairs(Players:GetPlayers()) do
+        if player ~= LocalPlayer then
+            createESP(player)
+        end
+    end
+    Players.PlayerAdded:Connect(createESP)
+    Players.PlayerRemoving:Connect(removeESP)
+end
+
+local function disableESP()
+    for _, data in pairs(espConnections) do
+        data.conn:Disconnect()
+        if data.gui then
+            data.gui:Destroy()
+        end
+    end
+    espConnections = {}
+end
+
+-- 🔘 Toggle ESP di WindUI
+ToolsTab:Toggle({
+    Title = GradientText("ESP (Ava + Health)", galaxyGradient),
+    Default = false,
+    Callback = function(state)
+        espEnabled = state
+        if state then
+            enableESP()
+            print("ESP Enabled ✅")
+        else
+            disableESP()
+            print("ESP Disabled ❌")
+        end
+    end
+})
+
+-- 🧩 Services
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local camera = workspace.CurrentCamera
+local LocalPlayer = Players.LocalPlayer
+
+-- ====== SPECTATE + TELEPORT + FLING (Unified Dropdown) ======
+local targetPlayer = nil
+local spectating = false
+
+-- Ambil daftar nama player selain LocalPlayer
+local function getPlayerNames()
+    local names = {}
+    for _, p in pairs(Players:GetPlayers()) do
+        if p ~= LocalPlayer then
+            table.insert(names, p.Name)
+        end
+    end
+    return names
+end
+
+-- Dropdown untuk pilih target player
+local playerDropdown = ToolsTab:Dropdown({
+    Title = GradientText("Pilih Player", galaxyGradient),
+    Values = getPlayerNames(),
+    Default = nil,
+    Callback = function(value)
+        targetPlayer = Players:FindFirstChild(value)
+        print("🎯 Target Player:", value)
+    end,
+})
+
+-- 🔁 Tombol untuk refresh manual daftar player
+ToolsTab:Button({
+    Title = GradientText("Refresh Player", galaxyGradient),
+    Callback = function()
+        if playerDropdown then
+            playerDropdown:UpdateValues(getPlayerNames())
+            print("✅ Daftar player berhasil di-refresh!")
+        end
+    end,
+})
+
+-- ⏱️ Auto refresh setiap 5 detik
+task.spawn(function()
+    while task.wait(5) do
+        if playerDropdown then
+            playerDropdown:UpdateValues(getPlayerNames())
+        end
+    end
+end)
+
+-- 🎥 Toggle untuk Spectate Player
+ToolsTab:Toggle({
+    Title = GradientText("Spectate Player", galaxyGradient),
+    Default = false,
+    Callback = function(state)
+        spectating = state
+        if spectating and targetPlayer and targetPlayer.Character then
+            print("👀 Spectating:", targetPlayer.Name)
+        else
+            print("🛑 Stopped spectating")
+        end
+    end,
+})
+
+-- Update kamera agar mengikuti targetPlayer saat spectate aktif
+RunService:BindToRenderStep("Spectate", Enum.RenderPriority.Camera.Value + 1, function()
+    if spectating and targetPlayer and targetPlayer.Character then
+        local humanoid = targetPlayer.Character:FindFirstChildOfClass("Humanoid")
+        if humanoid then
+            camera.CameraSubject = humanoid
+            camera.CameraType = Enum.CameraType.Custom
+        end
+    else
+        camera.CameraSubject = LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
+        camera.CameraType = Enum.CameraType.Custom
+    end
+end)
+
+-- 🚀 Tombol untuk teleport ke player target
+ToolsTab:Button({
+    Title = GradientText("Teleport Player", galaxyGradient),
+    Callback = function()
+        if targetPlayer and targetPlayer.Character and targetPlayer.Character:FindFirstChild("HumanoidRootPart") then
+            local hrp = targetPlayer.Character.HumanoidRootPart
+            if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
+                LocalPlayer.Character.HumanoidRootPart.CFrame = hrp.CFrame + Vector3.new(2, 0, 2)
+                print("📍 Teleported to:", targetPlayer.Name)
+            end
+        else
+            print("⚠️ Player target tidak valid!")
+        end
+    end,
+})
+
+-- ==========================================================
+-- 🌀 FLING PLAYER (terintegrasi dengan dropdown)
+-- ==========================================================
+local function SkidFling(TargetPlayer)
+    local Player = LocalPlayer
+    local Character = Player.Character
+    if not Character then return end
+    local Root = Character:FindFirstChild("HumanoidRootPart")
+    if not Root then return end
+
+    local TargetChar = TargetPlayer.Character
+    if not TargetChar then return end
+    local TRoot = TargetChar:FindFirstChild("HumanoidRootPart") or TargetChar:FindFirstChild("Torso") or TargetChar:FindFirstChild("Head")
+    if not TRoot then return end
+
+    -- Simpan posisi sebelum fling (buat balik nanti)
+    local OriginalCFrame = Root.CFrame
+
+    -- Hentikan fling aktif sebelumnya
+    if ActiveFling then
+        ActiveFling:Disconnect()
+        ActiveFling = nil
+    end
+    for _, bv in pairs(Root:GetChildren()) do
+        if bv:IsA("BodyVelocity") or bv:IsA("BodyGyro") then bv:Destroy() end
+    end
+
+    pcall(function()
+        sethiddenproperty(Player, "SimulationRadius", math.huge)
+        sethiddenproperty(Player, "MaximumSimulationRadius", math.huge)
+    end)
+
+    Root.AssemblyLinearVelocity = Vector3.zero
+    Root.RotVelocity = Vector3.zero
+
+    local BV = Instance.new("BodyVelocity")
+    BV.MaxForce = Vector3.new(1e9, 1e9, 1e9)
+    BV.Velocity = Vector3.zero
+    BV.Parent = Root
+
+    local BG = Instance.new("BodyGyro")
+    BG.MaxTorque = Vector3.new(1e9, 1e9, 1e9)
+    BG.P = 1e5
+    BG.CFrame = Root.CFrame
+    BG.Parent = Root
+
+    local startTime = tick()
+    local t = 0
+    ActiveFling = RunService.Heartbeat:Connect(function()
+        if not TRoot or not TRoot:IsDescendantOf(workspace) or tick() - startTime > 3 then
+            ActiveFling:Disconnect()
+            ActiveFling = nil
+            BV:Destroy()
+            BG:Destroy()
+
+            -- 🧭 Balik ke posisi semula setelah fling
+            task.delay(0.1, function()
+                if Character and Root then
+                    Root.CFrame = OriginalCFrame
+                    Root.AssemblyLinearVelocity = Vector3.zero
+                    Root.RotVelocity = Vector3.zero
+                end
+            end)
+            return
+        end
+
+        t += 1
+        local pulse = math.sin(tick() * 120)
+        local offsetX = math.sin(tick() * 80) * 0.5
+        local offsetY = math.abs(pulse) * 2.5  -- getaran naik turun di tengah badan target
+        local offsetZ = math.cos(tick() * 80) * 0.5
+
+        Root.CFrame = TRoot.CFrame * CFrame.new(offsetX, offsetY, offsetZ)
+        BG.CFrame = TRoot.CFrame
+
+        -- 🚀 Dorongan besar — vertikal dominan (biar target mental jauh)
+        local dir = (TRoot.Position - Root.Position).unit
+        local power = 5e4 + math.abs(pulse) * 3e5  -- skala dorongan tinggi
+        BV.Velocity = (dir * power) + Vector3.new(0, 6e5, 0)
+
+        -- 🛡️ Stabilkan diri biar gak mental
+        if t % 5 == 0 then
+            Root.AssemblyLinearVelocity = Vector3.zero
+            Root.RotVelocity = Vector3.zero
+        end
+    end)
+end
+
+-- 🔘 Tombol Fling Player dari dropdown
+ToolsTab:Button({
+    Title = GradientText("Fling Player", galaxyGradient),
+    Description = "Dorong player target dengan gaya ekstrem",
+    Callback = function()
+        if targetPlayer and targetPlayer ~= LocalPlayer then
+            Message("Fling", "Menyerang " .. targetPlayer.Name, 2)
+            task.spawn(SkidFling, targetPlayer)
+        else
+            Message("Error", "Pilih player dulu!", 2)
+        end
+    end,
+})
+
+-- 💫 RING PART TAB (Full logic ported from your old script)
+local RingTab = Window:Tab({
+    Title = GradientText("Ring Part", galaxyGradient),
+    Icon = "rotate-3d",
+})
+
+-- Services & player refs
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local PhysicsService = game:GetService("PhysicsService")
+local workspace = workspace
+local LocalPlayer = Players.LocalPlayer
+
+-- Ensure collision group exists
+pcall(function() PhysicsService:CreateCollisionGroup("OrbitParts") end)
+pcall(function() PhysicsService:CollisionGroupSetCollidable("OrbitParts", "Default", false) end)
+pcall(function() PhysicsService:CollisionGroupSetCollidable("OrbitParts", "OrbitParts", false) end)
+
+-- ======= State (copied names to keep parity) =======
+local scanRadius = 1000
+local orbitRadius = 100
+local orbitSpeed = 10
+local vibrateStrength = 5
+local vibrateSpeed = 50
+local vibrateAxis = "All"
+local orbitMode = "Horizontal"
+
+local partsList = {}
+local originalProps = {}
+local selectedParts = {}
+local basePositions = {}
+local ringEnabled = false
+
+local countLabelText = "" -- will be updated in UI notifications
+
+-- HRP safety
+local HRP
+local function refreshHRP()
+    local char = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
+    HRP = char:WaitForChild("HumanoidRootPart")
+end
+refreshHRP()
+LocalPlayer.CharacterAdded:Connect(refreshHRP)
+local function getHRP()
+    if HRP and HRP.Parent then return HRP end
+    refreshHRP(); return HRP
+end
+
+-- helpers: try set collision group (robust)
+local function trySetCollisionGroup(part, group)
+    pcall(function()
+        if PhysicsService and PhysicsService.SetPartCollisionGroup then
+            PhysicsService:SetPartCollisionGroup(part, group)
+        else
+            pcall(function() part.CollisionGroup = group end)
+        end
+    end)
+end
+
+local function breakAllConstraints(part)
+    if not part or not part.Parent then return end
+    local model = part:FindFirstAncestorWhichIsA("Model")
+    if model and model:FindFirstChildOfClass("Humanoid") then return end
+    if part:FindFirstAncestorWhichIsA("Accessory") then return end
+    local nuke = {"Weld","WeldConstraint","Motor6D","BallSocketConstraint","HingeConstraint",
+        "CylinderConstraint","PrismaticConstraint","RopeConstraint","SpringConstraint",
+        "RodConstraint","Glue","ManualWeld","Snap"}
+    for _, ch in ipairs(part:GetChildren()) do
+        if table.find(nuke, ch.ClassName) then
+            pcall(function() ch:Destroy() end)
+        end
+    end
+end
+
+-- scanParts (same logic, cap & filtering)
+local function scanParts(radius)
+    partsList = {}
+    originalProps = {}
+
+    local hrp = getHRP()
+    if not hrp then return 0 end
+
+    local candidates = {}
+    for _, obj in ipairs(workspace:GetDescendants()) do
+        if obj:IsA("BasePart") and not obj.Anchored and obj.Parent then
+            local model = obj:FindFirstAncestorWhichIsA("Model")
+            local isPlayerItem = (model and model:FindFirstChildOfClass("Humanoid")) or obj:FindFirstAncestorWhichIsA("Accessory")
+            if not isPlayerItem then
+                local ok, dist = pcall(function() return (obj.Position - hrp.Position).Magnitude end)
+                if ok and dist and dist <= radius then
+                    candidates[#candidates+1] = {part=obj, d=dist}
+                end
+            end
+        end
+    end
+
+    table.sort(candidates, function(a,b) return a.d < b.d end)
+    local CAP = 140
+    for i = 1, math.min(#candidates, CAP) do
+        local p = candidates[i].part
+        local cpp, massless, colGroup, canTouch, canQuery
+        pcall(function() cpp = p.CustomPhysicalProperties end)
+        pcall(function() massless = p.Massless end)
+        local okCol, col = pcall(function() return p.CollisionGroup end)
+        if okCol then colGroup = col end
+        pcall(function() canTouch = p.CanTouch end)
+        pcall(function() canQuery = p.CanQuery end)
+
+        partsList[#partsList+1] = p
+        originalProps[p] = {
+            CanCollide = p.CanCollide,
+            CustomPhysicalProperties = cpp,
+            CollisionGroup = (colGroup ~= nil and colGroup) or "Default",
+            Massless = massless,
+            CanTouch = canTouch,
+            CanQuery = canQuery,
+            OrigPosition = p.Position,
+        }
+    end
+    return #partsList
+end
+
+-- preparePartsForOrbit & restoreParts (keep BodyPosition logic)
+local function preparePartsForOrbit()
+    for _, part in ipairs(partsList) do
+        if part and part.Parent and not part.Anchored then
+            breakAllConstraints(part)
+            trySetCollisionGroup(part, "OrbitParts")
+            pcall(function()
+                part.CanCollide = false
+                part.Massless = true
+                part.CanTouch = false
+                part.CanQuery = false
+                part.CustomPhysicalProperties = PhysicalProperties.new(0.05, 0.3, 0.5, 1000, 0)
+            end)
+
+            local bp = part:FindFirstChild("OrbitBP") or Instance.new("BodyPosition")
+            bp.Name = "OrbitBP"
+            bp.MaxForce = Vector3.new(1e9,1e9,1e9)
+            bp.P = 1000000
+            bp.D = 8000
+            bp.Parent = part
+        end
+    end
+end
+
+local function restoreParts()
+    for _, part in ipairs(partsList) do
+        if part and part.Parent then
+            local bp = part:FindFirstChild("OrbitBP")
+            if bp then pcall(function() bp:Destroy() end) end
+            local orig = originalProps[part]
+            if orig then
+                pcall(function()
+                    part.CanCollide = orig.CanCollide
+                    part.Massless = orig.Massless
+                    part.CanTouch = orig.CanTouch
+                    part.CanQuery = orig.CanQuery
+                    part.CustomPhysicalProperties = orig.CustomPhysicalProperties
+                    trySetCollisionGroup(part, orig.CollisionGroup or "Default")
+                end)
+            end
+        end
+    end
+    partsList = {}
+    originalProps = {}
+    basePositions = {}
+end
+
+-- Selection highlight functions
+local function clearHighlights()
+    for _, part in ipairs(selectedParts) do
+        local hl = part:FindFirstChild("SelectionBox")
+        if hl then hl:Destroy() end
+    end
+    selectedParts = {}
+end
+
+local function addHighlight(part)
+    if not part or not part:IsA("BasePart") then return end
+    local hl = Instance.new("SelectionBox")
+    hl.Adornee = part
+    hl.LineThickness = 0.05
+    hl.Color3 = Color3.fromRGB(100, 200, 255)
+    hl.SurfaceColor3 = Color3.fromRGB(0, 180, 255)
+    hl.Parent = part
+end
+
+-- mouse selection (local)
+local mouse = LocalPlayer:GetMouse()
+local selecting = false
+mouse.Button1Down:Connect(function()
+    if selecting then
+        local target = mouse.Target
+        if target and target:IsA("BasePart") and not table.find(selectedParts, target) then
+            table.insert(selectedParts, target)
+            addHighlight(target)
+        end
+    end
+end)
+
+-- cache base positions for vibrate
+local function cacheBasePositions()
+    basePositions = {}
+    for _, part in ipairs(selectedParts) do
+        if part and part.Parent then
+            basePositions[part] = part.Position
+        end
+    end
+end
+
+-- vibrate selected parts (when ringEnabled ON)
+local function vibrateSelectedParts()
+    for _, part in ipairs(selectedParts) do
+        if part and part.Parent and basePositions[part] then
+            local vib = Vector3.zero
+            if vibrateAxis == "X" or vibrateAxis == "All" then
+                vib = vib + Vector3.new(math.sin(tick() * vibrateSpeed) * vibrateStrength, 0, 0)
+            end
+            if vibrateAxis == "Y" or vibrateAxis == "All" then
+                vib = vib + Vector3.new(0, math.sin(tick() * (vibrateSpeed+20)) * vibrateStrength, 0)
+            end
+            if vibrateAxis == "Z" or vibrateAxis == "All" then
+                vib = vib + Vector3.new(0, 0, math.sin(tick() * (vibrateSpeed+40)) * vibrateStrength)
+            end
+
+            local bp = part:FindFirstChild("OrbitBP") or Instance.new("BodyPosition")
+            bp.Name = "OrbitBP"
+            bp.MaxForce = Vector3.new(1e9,1e9,1e9)
+            bp.P = 1000000
+            bp.D = 8000
+            bp.Parent = part
+
+            bp.Position = basePositions[part] + vib
+        end
+    end
+end
+
+-- ensure player not colliding weirdly with OrbitParts
+local function disablePlayerCollision()
+    local char = LocalPlayer.Character
+    if not char then return end
+    for _, v in ipairs(char:GetDescendants()) do
+        if v:IsA("BasePart") then
+            pcall(function() PhysicsService:SetPartCollisionGroup(v, "Default") end)
+            pcall(function() PhysicsService:CollisionGroupSetCollidable("OrbitParts", v.CollisionGroup, false) end)
+        end
+    end
+end
+disablePlayerCollision()
+LocalPlayer.CharacterAdded:Connect(function()
+    task.wait(1)
+    disablePlayerCollision()
+end)
+
+-- Run loop (mirrors old RunService.Stepped loop)
+local theta = 0
+local steppedConn
+local function startRunLoop()
+    if steppedConn and steppedConn.Connected then return end
+    steppedConn = RunService.Stepped:Connect(function(_, dt)
+        if not ringEnabled then return end
+        pcall(function() sethiddenproperty(LocalPlayer, "SimulationRadius", math.huge) end)
+        local hrp = getHRP()
+        if not hrp then return end
+
+        theta += orbitSpeed * dt
+        local center = hrp.Position + Vector3.new(0, 2.5, 0)
+
+        for i, part in ipairs(partsList) do
+            if part and part.Parent and not part.Anchored then
+                local bp = part:FindFirstChild("OrbitBP")
+                if not bp then
+                    bp = Instance.new("BodyPosition")
+                    bp.Name = "OrbitBP"
+                    bp.MaxForce = Vector3.new(1e9, 1e9, 1e9)
+                    bp.P = 1000000
+                    bp.D = 8000
+                    bp.Parent = part
+                end
+
+                local angle = (i / (#partsList > 0 and #partsList or 1)) * (2 * math.pi) + theta
+                local targetPos
+
+                if orbitMode == "Horizontal" then
+                    targetPos = center + Vector3.new(math.cos(angle) * orbitRadius, 0, math.sin(angle) * orbitRadius)
+                elseif orbitMode == "Vertical" then
+                    targetPos = center + Vector3.new(0, math.sin(angle) * orbitRadius, math.cos(angle) * orbitRadius)
+                elseif orbitMode == "Vibrate" then
+                    if not basePositions[part] then basePositions[part] = part.Position end
+                    local vib = Vector3.zero
+                    if vibrateAxis == "X" or vibrateAxis == "All" then
+                        vib += Vector3.new(math.sin(tick() * vibrateSpeed) * vibrateStrength, 0, 0)
+                    end
+                    if vibrateAxis == "Y" or vibrateAxis == "All" then
+                        vib += Vector3.new(0, math.sin(tick() * vibrateSpeed) * vibrateStrength, 0)
+                    end
+                    if vibrateAxis == "Z" or vibrateAxis == "All" then
+                        vib += Vector3.new(0, 0, math.sin(tick() * vibrateSpeed) * vibrateStrength)
+                    end
+                    targetPos = basePositions[part] + vib
+                else
+                    -- fallback to horizontal
+                    targetPos = center + Vector3.new(math.cos(angle) * orbitRadius, 0, math.sin(angle) * orbitRadius)
+                end
+
+                pcall(function() bp.Position = targetPos end)
+            end
+        end
+
+        if #selectedParts > 0 then vibrateSelectedParts() end
+    end)
+end
+
+local function stopRunLoop()
+    if steppedConn then
+        pcall(function() steppedConn:Disconnect() end)
+        steppedConn = nil
+    end
+end
+
+-- ===== WindUI controls (updated for latest WindUI) =====
+
+-- 🔍 Scan
+RingTab:Button({
+    Title = GradientText("Scan Part", galaxyGradient),
+    Desc = "Scan parts di sekitar (exclude player & accessories).",
+    Callback = function()
+        local n = scanParts(scanRadius)
+        countLabelText = "Parts: " .. n
+        WindUI:Notify({
+            Title = GradientText("Scan Selesai", galaxyGradient),
+            Content = countLabelText,
+            Duration = 3,
+            Icon = "check-circle"
+        })
+    end,
+})
+
+-- 🌀 Toggle Ring
+RingTab:Toggle({
+    Title = GradientText("Ring Now", galaxyGradient),
+    Default = false,
+    Callback = function(state)
+        ringEnabled = state
+        if state then
+            preparePartsForOrbit()
+            cacheBasePositions()
+            startRunLoop()
+            WindUI:Notify({
+                Title = GradientText("Ring Aktif", galaxyGradient),
+                Content = "Orbit started.",
+                Duration = 3,
+                Icon = "play-circle"
+            })
+        else
+            restoreParts()
+            stopRunLoop()
+            clearHighlights()
+            WindUI:Notify({
+                Title = GradientText("", galaxyGradient),
+                Content = "Parts restored.",
+                Duration = 3,
+                Icon = "pause-circle"
+            })
+        end
+    end,
+})
+
+-- 📏 Sliders (WindUI v3+)
+RingTab:Slider({
+    Title = GradientText("Scan Radius", galaxyGradient),
+    Step = 10,
+    Value = { Min = 50, Max = 2000, Default = scanRadius },
+    Callback = function(val)
+        scanRadius = math.floor(val)
+    end,
+})
+
+RingTab:Slider({
+    Title = GradientText("Orbit Radius", galaxyGradient),
+    Step = 1,
+    Value = { Min = 0, Max = 1000, Default = orbitRadius },
+    Callback = function(val)
+        orbitRadius = math.floor(val)
+    end,
+})
+
+RingTab:Slider({
+    Title = GradientText("Orbit Speed", galaxyGradient),
+    Step = 1,
+    Value = { Min = 0, Max = 500, Default = orbitSpeed },
+    Callback = function(val)
+        orbitSpeed = val
+    end,
+})
+
+RingTab:Slider({
+    Title = GradientText("Vibrate Strength", galaxyGradient),
+    Step = 1,
+    Value = { Min = 0, Max = 200, Default = vibrateStrength },
+    Callback = function(val)
+        vibrateStrength = math.floor(val)
+    end,
+})
+
+RingTab:Slider({
+    Title = GradientText("Vibrate Speed", galaxyGradient),
+    Step = 1,
+    Value = { Min = 0, Max = 200, Default = vibrateSpeed },
+    Callback = function(val)
+        vibrateSpeed = math.floor(val)
+    end,
+})
+
+-- 🧭 Dropdown (WindUI v2.5+)
+RingTab:Dropdown({
+    Title = GradientText("VibrateAxis", galaxyGradient),
+    Values = { "All", "X", "Y", "Z" },
+    Default = vibrateAxis,
+    Multi = false,
+    Callback = function(val)
+        vibrateAxis = val
+    end,
+})
+
+-- 🔄 Mode Cycle Button
+local modeOptions = { "Horizontal", "Vertical", "Vibrate" }
+local modeIndex = 1
+RingTab:Button({
+    Title = GradientText("Change Mode", galaxyGradient),
+    Desc = "Mode saat ini: " .. orbitMode,
+    Callback = function()
+        modeIndex = modeIndex % #modeOptions + 1
+        orbitMode = modeOptions[modeIndex]
+        WindUI:Notify({
+            Title = GradientText("Mode Diganti", galaxyGradient),
+            Content = "Mode: " .. orbitMode,
+            Duration = 2,
+            Icon = "refresh-cw"
+        })
+    end,
+})
+
+-- 📊 Status Info
+RingTab:Button({
+    Title = GradientText("Status", galaxyGradient),
+    Desc = "Tampilkan jumlah parts & selected parts.",
+    Callback = function()
+        WindUI:Notify({
+            Title = GradientText("Status part", galaxyGradient),
+            Content = ("Scanned: %d parts\nSelected: %d parts\nMode: %s"):format(#partsList, #selectedParts, orbitMode),
+            Duration = 4,
+            Icon = "info"
+        })
+    end,
+})
+
+-- 🎯 AIM SNAP PRO (WindUI Compatible) — Robust Kill Aura (no auto-click)
+local Players = game:GetService("Players")
+local UserInputService = game:GetService("UserInputService")
+local Camera = workspace.CurrentCamera
+local LocalPlayer = Players.LocalPlayer
+local RunService = game:GetService("RunService")
+
+-- === Variabel utama ===
+local AimSnapEnabled = false
+local SnapRange = 120
+local AimPart = "Head"
+local OnlyEnemy = true
+local VisibleCheck = true
+local ShotAuraEnabled = false
+local ShotAuraRange = 20 -- default kill-aura radius (studs)
+
+-- pastikan Window (WindUI) sudah ada sebelum bagian UI ini
+local GunTab = Window:Tab({
+    Title = GradientText("Combat Arena", galaxyGradient),
+    Icon = "crosshair",
+})
+
+-- === UI (format WindUI baru) ===
+GunTab:Toggle({
+    Title = GradientText("AimBot", galaxyGradient),
+    Description = "Auto snap kamera ke musuh saat menembak",
+    Default = false,
+    Callback = function(state) AimSnapEnabled = state end,
+})
+
+GunTab:Slider({
+    Title = GradientText("Range AimBot", galaxyGradient),
+    Step = 1,
+    Value = {Min = 30, Max = 500, Default = SnapRange},
+    Callback = function(value) SnapRange = math.floor(value) end,
+})
+
+GunTab:Toggle({
+    Title = GradientText("Only Enemy", galaxyGradient),
+    Description = "Hanya target musuh, tidak teman satu tim",
+    Default = OnlyEnemy,
+    Callback = function(state) OnlyEnemy = state end,
+})
+
+GunTab:Toggle({
+    Title = GradientText("Visible Check", galaxyGradient),
+    Description = "Hanya snap jika musuh terlihat (raycast)",
+    Default = VisibleCheck,
+    Callback = function(state) VisibleCheck = state end,
+})
+
+GunTab:Toggle({
+    Title = GradientText("Auto Shot", galaxyGradient),
+    Description = "Auto-aim (Kill Aura) - TANPA auto-click",
+    Default = ShotAuraEnabled,
+    Callback = function(state) ShotAuraEnabled = state end,
+})
+
+GunTab:Slider({
+    Title = GradientText("Range Aura", galaxyGradient),
+    Step = 1,
+    Value = {Min = 5, Max = 500, Default = ShotAuraRange},
+    Callback = function(value) ShotAuraRange = math.floor(value) end,
+})
+
+-- === Helper: pastikan character & HRP tersedia ===
+local character = LocalPlayer.Character
+if not character then
+    LocalPlayer.CharacterAdded:Wait()
+    character = LocalPlayer.Character
+end
+
+LocalPlayer.CharacterAdded:Connect(function(c) character = c end)
+
+local function getMyHRP()
+    if character and character:FindFirstChild("HumanoidRootPart") then
+        return character.HumanoidRootPart
+    end
+    return nil
+end
+
+-- === Visibility check via RaycastParams (lebih andal) ===
+local rayParams = RaycastParams.new()
+rayParams.FilterType = Enum.RaycastFilterType.Blacklist
+
+local function isVisible(targetPart)
+    if not VisibleCheck then return true end
+    if not (targetPart and targetPart.Position) then return false end
+
+    rayParams.FilterDescendantsInstances = { character }
+    local origin = Camera and Camera.CFrame and Camera.CFrame.Position or (getMyHRP() and getMyHRP().Position) or Vector3.new()
+    local direction = targetPart.Position - origin
+    local result = workspace:Raycast(origin, direction, rayParams)
+
+    if not result then
+        return true
+    end
+
+    local hit = result.Instance
+    if hit and hit:IsDescendantOf(targetPart.Parent) then
+        return true
+    end
+
+    return false
+end
+
+-- === Cari target terdekat berdasarkan HRP distance ===
+local function getClosestTarget(maxRange)
+    local myHRP = getMyHRP()
+    local originPos = myHRP and myHRP.Position or (Camera and Camera.CFrame.Position) or Vector3.new()
+    local closest = nil
+    local shortest = maxRange + 0.001
+    local myTeam = LocalPlayer.Team
+
+    for _, player in ipairs(Players:GetPlayers()) do
+        if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+            local humanoid = player.Character:FindFirstChildOfClass("Humanoid")
+            local hrp = player.Character:FindFirstChild("HumanoidRootPart")
+            if humanoid and humanoid.Health > 0 and hrp then
+                if OnlyEnemy and myTeam and player.Team == myTeam then
+                    -- skip teammate
+                else
+                    local dist = (hrp.Position - originPos).Magnitude
+                    if dist <= shortest then
+                        if isVisible(hrp) then
+                            shortest = dist
+                            closest = hrp
+                        end
+                    end
+                end
+            end
+        end
+    end
+
+    return closest
+end
+
+-- === Loop Shot Aura (throttled) ===
+task.spawn(function()
+    while true do
+        task.wait(0.08)
+        if ShotAuraEnabled then
+            local target = getClosestTarget(ShotAuraRange)
+            if target and target.Parent then
+                if Camera and Camera.CFrame then
+                    Camera.CFrame = CFrame.lookAt(Camera.CFrame.Position, target.Position)
+                end
+            end
+        end
+    end
+end)
+
+-- === Snap manual saat menembak ===
+UserInputService.InputBegan:Connect(function(input, gpe)
+    if gpe or not AimSnapEnabled then return end
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        local target = getClosestTarget(SnapRange)
+        if target and target.Parent then
+            if Camera and Camera.CFrame then
+                Camera.CFrame = CFrame.lookAt(Camera.CFrame.Position, target.Position)
+            end
+        end
+    end
+end)
+
+-- ⚡ Enemy ESP Like Infinite Yield (Auto Team Color)
+local EnemyESPEnabled = false
+local ESPCache = {}
+
+GunTab:Toggle({
+    Title = GradientText("Smart ESP", galaxyGradient),
+    Description = "ESP mirip Infinite Yield (warna otomatis: merah=musuh, biru=teman)",
+    Default = false,
+    Callback = function(state)
+        EnemyESPEnabled = state
+        if not state then
+            for _, v in pairs(ESPCache) do
+                v.Box.Visible = false
+                v.Label.Visible = false
+            end
+        end
+    end,
+})
+
+local function createESP(player)
+    local box = Drawing.new("Square")
+    box.Thickness = 1.5
+    box.Filled = false
+    box.Visible = false
+
+    local nameLabel = Drawing.new("Text")
+    nameLabel.Size = 14
+    nameLabel.Center = true
+    nameLabel.Outline = true
+    nameLabel.Visible = false
+
+    ESPCache[player] = {Box = box, Label = nameLabel}
+end
+
+local function removeESP(player)
+    if ESPCache[player] then
+        for _, obj in pairs(ESPCache[player]) do
+            obj:Remove()
+        end
+        ESPCache[player] = nil
+    end
+end
+
+Players.PlayerRemoving:Connect(removeESP)
+
+RunService.RenderStepped:Connect(function()
+    if not EnemyESPEnabled then return end
+
+    for _, player in ipairs(Players:GetPlayers()) do
+        if player ~= LocalPlayer then
+            if not ESPCache[player] then
+                createESP(player)
+            end
+
+            local data = ESPCache[player]
+            local char = player.Character
+            local hrp = char and char:FindFirstChild("HumanoidRootPart")
+            local head = char and char:FindFirstChild("Head")
+            local hum = char and char:FindFirstChildOfClass("Humanoid")
+
+            if char and hrp and hum and hum.Health > 0 then
+                local pos, onScreen = Camera:WorldToViewportPoint(hrp.Position)
+                if onScreen then
+                    local headPos = Camera:WorldToViewportPoint(head.Position + Vector3.new(0, 0.5, 0))
+                    local sizeY = math.abs(headPos.Y - pos.Y)
+                    local boxSize = Vector2.new(sizeY / 1.5, sizeY)
+                    local boxPos = Vector2.new(pos.X - boxSize.X / 2, pos.Y - boxSize.Y / 2)
+
+                    data.Box.Position = boxPos
+                    data.Box.Size = boxSize
+                    data.Box.Visible = true
+                    data.Label.Visible = true
+
+                    local color
+                    if player.Team and LocalPlayer.Team then
+                        if player.Team == LocalPlayer.Team then
+                            color = Color3.fromRGB(80, 170, 255)
+                        else
+                            color = Color3.fromRGB(255, 70, 70)
+                        end
+                    else
+                        color = Color3.fromRGB(255, 70, 70)
+                    end
+
+                    data.Box.Color = color
+                    data.Label.Color = color
+                    data.Label.Text = string.format("%s [%.0f]", player.DisplayName, (hrp.Position - Camera.CFrame.Position).Magnitude)
+                    data.Label.Position = Vector2.new(pos.X, boxPos.Y - 12)
+                else
+                    data.Box.Visible = false
+                    data.Label.Visible = false
+                end
+            else
+                data.Box.Visible = false
+                data.Label.Visible = false
+            end
+        end
+    end
+end)
+
+
+-- ⚡ AUTO TARGET TELEPORT (Smart Orbit Dash - Full Version)
+local TeleportEnemyEnabled = false
+local TeleportInterval = 0.8
+local TeleportSpeed = 0.3
+local TweenService = game:GetService("TweenService")
+
+GunTab:Toggle({
+    Title = GradientText("Teleport Musuh", galaxyGradient),
+    Description = "Auto ganti target, stay di udara, jarak jauh langsung nyusul",
+    Default = false,
+    Callback = function(state)
+        TeleportEnemyEnabled = state
+    end,
+})
+
+local currentTarget = nil
+
+local function hoverInAir()
+    local myHRP = getMyHRP()
+    if myHRP then
+        myHRP.Velocity = Vector3.zero
+        myHRP.CFrame = myHRP.CFrame + Vector3.new(0, 0.05, 0)
+    end
+end
+
+local function teleportAndOrbit(target)
+    local myHRP = getMyHRP()
+    if not (myHRP and target) then return end
+    if not target.Parent then return end
+
+    local targetPos = target.Position
+    local orbitRadius = 5
+    local angle = math.rad(math.random(0, 360))
+    local offset = Vector3.new(math.cos(angle) * orbitRadius, 4, math.sin(angle) * orbitRadius)
+    local finalPos = targetPos + offset + Vector3.new(0, 4, 0)
+
+    local distance = (myHRP.Position - targetPos).Magnitude
+
+    -- Langsung teleport kalau terlalu jauh
+    if distance > 200 then
+        myHRP.CFrame = CFrame.new(targetPos + Vector3.new(0, 30, 0))
+    end
+
+    -- Tween halus mendekati orbit
+    local tweenInfo = TweenInfo.new(TeleportSpeed, Enum.EasingStyle.Sine, Enum.EasingDirection.Out)
+    local tween = TweenService:Create(myHRP, tweenInfo, {Position = finalPos})
+    tween:Play()
+
+    -- Hadap ke target
+    task.delay(TeleportSpeed / 1.2, function()
+        if myHRP and target and target.Parent then
+            myHRP.CFrame = CFrame.lookAt(myHRP.Position, target.Position)
+        end
+    end)
+end
+
+task.spawn(function()
+    while true do
+        task.wait(TeleportInterval)
+
+        if not TeleportEnemyEnabled then
+            currentTarget = nil
+        else
+            -- cek target lama masih valid?
+            if not currentTarget or not currentTarget.Parent or (currentTarget.Parent:FindFirstChildOfClass("Humanoid") and currentTarget.Parent:FindFirstChildOfClass("Humanoid").Health <= 0) then
+                currentTarget = getClosestTarget(999999) -- cari baru otomatis
+            end
+
+            if currentTarget then
+                teleportAndOrbit(currentTarget)
+            else
+                hoverInAir()
+            end
+        end
+    end
+end)
+
+-- 🌀 MORPHING TAB
+local Players = game:GetService("Players")
+local LocalPlayer = Players.LocalPlayer
+
+local MorphingTab = Window:Tab({
+    Title = GradientText("Morphing", galaxyGradient),
+    Icon = "user",
+})
+
+-- ⚠️ DISCLAIMER (pakai button agar pasti muncul di semua versi WindUI)
+MorphingTab:Button({
+    Title = GradientText("DISCLAIMER", galaxyGradient),
+    Desc = "Awas! Jika fitur ini dipakai, untuk balik ke karakter asli harus REJOIN!! Jadi pikir baik-baik sebelum menggunakannya!",
+    Callback = function()
+        warn("Baca peringatannya dulu sebelum morph!")
+    end,
+})
+
+-- 🧍 Player List Dropdown
+local playerNames = {}
+local function UpdatePlayerList()
+    playerNames = {}
+    for _, plr in ipairs(Players:GetPlayers()) do
+        table.insert(playerNames, plr.Name)
+    end
+end
+UpdatePlayerList()
+
+local SelectedPlayer = nil
+local PlayerDropdown = MorphingTab:Dropdown({
+    Title = GradientText("List Player", galaxyGradient),
+    Desc = "List player",
+    Values = playerNames,
+    Default = playerNames[1] or "No players",
+    Multi = false,
+    Callback = function(selected)
+        SelectedPlayer = selected
+        print("Selected player:", selected)
+    end,
+})
+
+-- Auto-refresh saat player join/leave
+Players.PlayerAdded:Connect(function()
+    UpdatePlayerList()
+    if PlayerDropdown and typeof(PlayerDropdown.SetValues) == "function" then
+        PlayerDropdown:SetValues(playerNames)
+    end
+end)
+Players.PlayerRemoving:Connect(function()
+    UpdatePlayerList()
+    if PlayerDropdown and typeof(PlayerDropdown.SetValues) == "function" then
+        PlayerDropdown:SetValues(playerNames)
+    end
+end)
+
+-- 🔁 Manual Refresh
+MorphingTab:Button({
+    Title = GradientText("Refresh Player", galaxyGradient),
+    Desc = "Perbarui daftar player",
+    Callback = function()
+        UpdatePlayerList()
+        if PlayerDropdown and typeof(PlayerDropdown.SetValues) == "function" then
+            PlayerDropdown:SetValues(playerNames)
+        end
+        print("Player list refreshed!")
+    end,
+})
+
+-- 🧬 MORPH BUTTON (1:1 Animate)
+local morphing = false
+
+MorphingTab:Button({
+    Title = GradientText("Start Morph", galaxyGradient),
+    Desc = "Ganti karakter",
+    Callback = function()
+        if morphing then
+            warn("⚠️ Morph sedang berjalan, tunggu sebentar...")
+            return
+        end
+        morphing = true
+
+        task.defer(function()
+            task.wait(1)
+            morphing = false
+        end)
+
+        if not SelectedPlayer then
+            warn("⚠️ Pilih player dulu dari dropdown!")
+            return
+        end
+
+        local target = Players:FindFirstChild(SelectedPlayer)
+        if not target or not target.Character then
+            warn("⚠️ Target tidak ditemukan atau belum spawn.")
+            return
+        end
+        if target == LocalPlayer then
+            warn("⚠️ Tidak bisa morph ke diri sendiri.")
+            return
+        end
+
+        local oldChar = LocalPlayer.Character
+        local oldPos = (oldChar and oldChar:FindFirstChild("HumanoidRootPart"))
+            and oldChar.HumanoidRootPart.CFrame
+            or CFrame.new(0, 10, 0)
+
+        -- 🔹 Hapus karakter lama dulu
+        if oldChar and oldChar.Parent then
+            pcall(function() oldChar:Destroy() end)
+            task.wait(0.2)
+        end
+
+        -- 🔹 Buat karakter baru dari target
+        local desc = Players:GetHumanoidDescriptionFromUserId(target.UserId)
+        local newChar = Players:CreateHumanoidModelFromDescription(desc, Enum.HumanoidRigType.R15)
+        newChar.Name = LocalPlayer.Name
+        newChar.Parent = workspace
+
+        local newHum = newChar:WaitForChild("Humanoid")
+        local newRoot = newChar:WaitForChild("HumanoidRootPart")
+        newRoot.CFrame = oldPos + Vector3.new(0, 2, 0)
+
+        -- 🔹 Ganti karakter player lokal
+        LocalPlayer.Character = newChar
+        workspace.CurrentCamera.CameraSubject = newHum
+
+        -- 🔹 Clone Animate dari target
+        local function cloneAnimate(src, dest)
+            local animate = src:FindFirstChild("Animate")
+            if not animate then return false end
+            local clone = animate:Clone()
+            clone.Parent = dest
+            return true
+        end
+
+        local ok = cloneAnimate(target.Character, newChar)
+        if not ok then
+            -- fallback animasi default
+            local animate = Instance.new("LocalScript")
+            animate.Name = "Animate"
+            animate.Source = [[
+                local h = script.Parent:WaitForChild("Humanoid")
+                local function loadAnim(name, id)
+                    local a = Instance.new("Animation")
+                    a.Name = name
+                    a.AnimationId = id
+                    return h:LoadAnimation(a)
+                end
+                local idle = loadAnim("Idle", "rbxassetid://507766388")
+                local walk = loadAnim("Walk", "rbxassetid://507777826")
+                local run  = loadAnim("Run",  "rbxassetid://507767714")
+                local jump = loadAnim("Jump", "rbxassetid://507765000")
+                local fall = loadAnim("Fall", "rbxassetid://507767968")
+
+                h.Running:Connect(function(speed)
+                    if speed > 1 then
+                        idle:Stop(); walk:Play()
+                    else
+                        walk:Stop(); idle:Play()
+                    end
+                end)
+                h.Jumping:Connect(function()
+                    walk:Stop(); idle:Stop(); jump:Play()
+                end)
+                h.FreeFalling:Connect(function()
+                    fall:Play()
+                end)
+                h.StateChanged:Connect(function(_, new)
+                    if new == Enum.HumanoidStateType.Landed then
+                        fall:Stop(); idle:Play()
+                    end
+                end)
+                idle:Play()
+            ]]
+            animate.Parent = newChar
+        end
+
+        -- 🔹 Pastikan humanoid aktif & bisa dikontrol
+        task.wait(0.1)
+        newHum.PlatformStand = false
+        newHum.WalkSpeed = 16
+        newHum.JumpPower = 50
+        newHum:ChangeState(Enum.HumanoidStateType.GettingUp)
+
+        print("✅ Morph sukses! Sekarang kamu menjadi:", target.Name)
+    end
+})
+
+-- 💬 TAB: Detect Admin
+local DetectTab = Window:Tab({
+    Title = GradientText("Detect Admins", galaxyGradient),
+    Icon = "shield-alert",
+})
+
+-- ====== LOGIKA ======
+local Players = game:GetService("Players")
+local detectedAdmins = {}
+local viewHighlight = false
+local autoScan = false
+
+-- Fungsi cek admin
+local function isAdmin(player)
+    if player.UserId == game.CreatorId then return true end
+    if game.CreatorType == Enum.CreatorType.Group then
+        local ok, rank = pcall(function()
+            return player:GetRankInGroup(game.CreatorId)
+        end)
+        if ok and rank >= 200 then return true end
+    end
+    return false
+end
+
+-- Notifikasi WindUI
+local function showNotification(msg)
+    WindUI:Notify({
+        Title = GradientText("Admin Detector", galaxyGradient),
+        Content = msg,
+        Duration = 4,
+    })
+end
+
+-- Fungsi deteksi admin
+local function detectAdmins()
+    local found = false
+    for _, p in ipairs(Players:GetPlayers()) do
+        if isAdmin(p) then
+            found = true
+            if not detectedAdmins[p.UserId] then
+                detectedAdmins[p.UserId] = true
+                showNotification("⚠️ Admin Terdeteksi: " .. p.Name)
+            end
+            if viewHighlight and p.Character and p.Character:FindFirstChild("HumanoidRootPart") then
+                local hrp = p.Character.HumanoidRootPart
+                if not hrp:FindFirstChild("AdminHighlight") then
+                    local hl = Instance.new("SelectionBox")
+                    hl.Name = "AdminHighlight"
+                    hl.Adornee = hrp
+                    hl.Color3 = Color3.fromRGB(255, 0, 0)
+                    hl.LineThickness = 0.05
+                    hl.Parent = hrp
+                end
+            end
+        end
+    end
+    if not found then
+        showNotification("✅ Aman, tidak ada admin di sini.")
+    end
+end
+
+-- ====== UI ELEMENTS ======
+DetectTab:Paragraph({
+    Title = GradientText("Sistem Deteksi Admin", galaxyGradient),
+    Desc = "Mendeteksi admin yang masuk ke server & menandainya secara otomatis.",
+})
+
+-- Tombol cek manual
+DetectTab:Button({
+    Title = GradientText("Deteksi Manual", galaxyGradient),
+    Desc = "Periksa sekarang juga apakah ada admin di server.",
+    Callback = detectAdmins,
+})
+
+-- Toggle highlight admin
+DetectTab:Toggle({
+    Title = GradientText("Perjelas Ava admin", galaxyGradient),
+    Default = false,
+    Callback = function(state)
+        viewHighlight = state
+        showNotification("Highlight Admin: " .. (state and "ON" or "OFF"))
+        if not state then
+            for _, p in ipairs(Players:GetPlayers()) do
+                if p.Character and p.Character:FindFirstChild("HumanoidRootPart") then
+                    local hl = p.Character.HumanoidRootPart:FindFirstChild("AdminHighlight")
+                    if hl then hl:Destroy() end
+                end
+            end
+        else
+            detectAdmins()
+        end
+    end,
+})
+
+-- Toggle auto scan
+DetectTab:Toggle({
+    Title = GradientText("Auto Deteksi 60s", galaxyGradient),
+    Default = false,
+    Callback = function(state)
+        autoScan = state
+        showNotification("Auto Detect: " .. (state and "ON" or "OFF"))
+    end,
+})
+
+-- Info paragraf
+DetectTab:Paragraph({
+    Title = GradientText("Cara Pakai", galaxyGradient),
+    Desc = [[
+1️⃣ Tekan "Detect Admin (Manual)" untuk memeriksa langsung.
+2️⃣ Aktifkan "Highlight Admin" untuk menandai karakter admin.
+3️⃣ Nyalakan "Auto Detect Admin 60s)" agar mendeteksi otomatis setiap 1 menit.
+    ]],
+})
+
+-- Notifikasi admin join
+Players.PlayerAdded:Connect(function(p)
+    if isAdmin(p) then
+        showNotification("⚠️ Admin baru masuk: " .. p.Name)
+        if viewHighlight then
+            repeat task.wait() until p.Character and p.Character:FindFirstChild("HumanoidRootPart")
+            local hl = Instance.new("SelectionBox")
+            hl.Name = "AdminHighlight"
+            hl.Adornee = p.Character.HumanoidRootPart
+            hl.Color3 = Color3.fromRGB(255, 0, 0)
+            hl.LineThickness = 0.05
+            hl.Parent = p.Character.HumanoidRootPart
+        end
+    end
+end)
+
+-- Loop auto detect tiap 5 detik
+task.spawn(function()
+    while task.wait(60) do
+        if autoScan then
+            detectAdmins()
+        end
+    end
+end)
+
+
+-- 🌀 MISC TAB
+local MiscTab = Window:Tab({
+    Title = GradientText("Setting", galaxyGradient),
+    Icon = "wrench",
+})
+
+-- 🎨 SYSTEM GANTI TEMA + AUTO REMEMBER
+
+-- Folder penyimpanan config
+local ThemeConfigFolder = "VoidHubConfig"
+local ThemeConfigFile = ThemeConfigFolder .. "/theme.txt"
+
+-- Pastikan foldernya ada
+if not isfolder(ThemeConfigFolder) then
+    makefolder(ThemeConfigFolder)
+end
+
+-- Fungsi baca/simpan
+local function SaveTheme(theme)
+    writefile(ThemeConfigFile, theme)
+end
+
+local function LoadTheme()
+    if isfile(ThemeConfigFile) then
+        return readfile(ThemeConfigFile)
+    else
+        return "Dark" -- Default
+    end
+end
+
+-- 🧃 Tambahkan custom theme
+WindUI:AddTheme({
+    Name = "Ocean Blue",
+    Accent = WindUI:Gradient({
+        ["0"] = { Color = Color3.fromHex("#0077ff"), Transparency = 0 },
+        ["100"] = { Color = Color3.fromHex("#0048aa"), Transparency = 0 },
+    }, { Rotation = 45 }),
+    Dialog = Color3.fromHex("#0a0f18"),
+    Outline = Color3.fromHex("#3b82f6"),
+    Text = Color3.fromHex("#e0f2ff"),
+    Placeholder = Color3.fromHex("#6b7280"),
+    Background = Color3.fromHex("#0d1117"),
+    Button = Color3.fromHex("#1e3a8a"),
+    Icon = Color3.fromHex("#60a5fa")
+})
+
+WindUI:AddTheme({
+    Name = "Sakura Pink",
+    Accent = WindUI:Gradient({
+        ["0"] = { Color = Color3.fromHex("#ffb6c1"), Transparency = 0 },
+        ["100"] = { Color = Color3.fromHex("#ff8fab"), Transparency = 0 },
+    }, { Rotation = 0 }),
+    Dialog = Color3.fromHex("#ffe4e6"),
+    Outline = Color3.fromHex("#ff7ba8"),
+    Text = Color3.fromHex("#3f3f46"),
+    Placeholder = Color3.fromHex("#a1a1aa"),
+    Background = Color3.fromHex("#fff0f6"),
+    Button = Color3.fromHex("#f472b6"),
+    Icon = Color3.fromHex("#db2777")
+})
+
+WindUI:AddTheme({
+    Name = "Neon Cyber",
+    Accent = WindUI:Gradient({
+        ["0"] = { Color = Color3.fromHex("#00ff88"), Transparency = 0 },
+        ["100"] = { Color = Color3.fromHex("#009966"), Transparency = 0 },
+    }, { Rotation = 0 }),
+    Dialog = Color3.fromHex("#0d0d0d"),
+    Outline = Color3.fromHex("#00ff88"),
+    Text = Color3.fromHex("#eafff4"),
+    Placeholder = Color3.fromHex("#6b7280"),
+    Background = Color3.fromHex("#0a0a0a"),
+    Button = Color3.fromHex("#064e3b"),
+    Icon = Color3.fromHex("#10b981")
+})
+
+-- 🧩 Baca tema terakhir
+local lastTheme = LoadTheme()
+WindUI:SetTheme(lastTheme)
+
+-- 🔘 Dropdown untuk pilih tema
+MiscTab:Dropdown({
+    Title = GradientText("Pilih Tema", galaxyGradient),
+    Values = {"Dark", "Light", "Ocean Blue", "Sakura Pink", "Neon Cyber"},
+    Default = lastTheme,
+    Callback = function(value)
+        WindUI:SetTheme(value)
+        SaveTheme(value)
+        WindUI:Notify({
+            Title = GradientText("Tema DiUnah", galaxyGradient),
+            Content = "Sekarang tema-nya: " .. value,
+            Duration = 3,
+            Icon = "palette",
+        })
+    end,
+})
+
+
+MiscTab:Toggle({
+    Title = GradientText("Anti AFK", galaxyGradient),
+    Default = false,
+    Callback = function(state)
+        if state then
+            local vu = game:GetService("VirtualUser")
+            game.Players.LocalPlayer.Idled:Connect(function()
+                vu:Button2Down(Vector2.new(0,0), workspace.CurrentCamera.CFrame)
+                task.wait(1)
+                vu:Button2Up(Vector2.new(0,0), workspace.CurrentCamera.CFrame)
+            end)
+            print("Anti AFK aktif ✅")
+        else
+            print("Anti AFK dimatikan ❌")
+        end
+    end
+})
+
+MiscTab:Button({
+    Title = GradientText("Rejoin Server", galaxyGradient),
+    Callback = function()
+        local TeleportService = game:GetService("TeleportService")
+        local player = game.Players.LocalPlayer
+
+        -- Coba teleport ke server yang sama
+        TeleportService:TeleportToPlaceInstance(game.PlaceId, game.JobId, player)
+        print("Rejoining current server... 🔁")
+    end
+})
+
+local currentSound = nil
+local musicEnabled = false
+
+MiscTab:Input({
+    Title = GradientText("Play Musik", galaxyGradient),
+    PlaceholderText = "Masukkan ID...",
+    RemoveTextAfterFocusLost = true,
+    Callback = function(id)
+        -- Hapus musik lama (kalau ada)
+        if currentSound then
+            currentSound:Destroy()
+            currentSound = nil
+        end
+
+        -- Buat sound baru
+        local s = Instance.new("Sound")
+        s.SoundId = "rbxassetid://" .. id
+        s.Volume = 1
+        s.Looped = true
+        s.Parent = workspace
+        currentSound = s
+
+        -- Mainkan kalau toggle aktif
+        if musicEnabled then
+            s:Play()
+            print("Lagu diputar:", id)
+        else
+            print("Lagu siap, tapi toggle musik OFF.")
+        end
+    end
+})
+
+MiscTab:Toggle({
+    Title = GradientText("Play", galaxyGradient),
+    Default = false,
+    Callback = function(value)
+        musicEnabled = value
+        if currentSound then
+            if value then
+                currentSound:Play()
+                print("Musik dihidupkan.")
+            else
+                currentSound:Pause()
+                print("Musik dimatikan.")
+            end
+        else
+            print("Belum ada musik yang dipilih.")
+        end
+    end
+})
+
+-- 🚀 Anti-Lag (Optimized Map Cleaner)
+local antiLagEnabled = false
+local hiddenParts = {}
+
+MiscTab:Toggle({
+    Title = GradientText("AntiLag (BUG)", galaxyGradient),
+    Default = false,
+    Desc = "Hapus objek dekoratif map biar performa meningkat.",
+    Callback = function(state)
+        antiLagEnabled = state
+
+        if state then
+            local removedCount = 0
+            for _, obj in pairs(workspace:GetDescendants()) do
+                -- 🎯 Hindari hapus hal penting
+                if obj:IsA("BasePart") 
+                    and obj.Parent ~= game.Players.LocalPlayer.Character
+                    and not obj:IsDescendantOf(game.Players)
+                    and not obj:IsDescendantOf(game.CoreGui)
+                    and not obj:IsDescendantOf(game.Lighting)
+                    and not obj:IsDescendantOf(game.ReplicatedStorage)
+                    and not obj:IsDescendantOf(game.StarterGui)
+                then
+                    -- 🎨 Deteksi part dekoratif (nama-nama umum)
+                    local lowerName = string.lower(obj.Name)
+                    if string.find(lowerName, "tree") 
+                    or string.find(lowerName, "rock")
+                    or string.find(lowerName, "grass")
+                    or string.find(lowerName, "bush")
+                    or string.find(lowerName, "leaf")
+                    or string.find(lowerName, "flower")
+                    or string.find(lowerName, "deco")
+                    or string.find(lowerName, "prop")
+                    or string.find(lowerName, "building")
+                    or string.find(lowerName, "fence")
+                    or string.find(lowerName, "mountain")
+                    or (obj.Size.Magnitude > 150 and obj.Anchored) -- objek besar map statis
+                    then
+                        table.insert(hiddenParts, obj)
+                        obj.Transparency = 1
+                        obj.CanCollide = false
+                        if obj:FindFirstChildOfClass("Decal") then
+                            obj:FindFirstChildOfClass("Decal"):Destroy()
+                        end
+                        removedCount += 1
+                    end
+                end
+            end
+
+            WindUI:Notify({
+                Title = GradientText("AntiLag Aktif", galaxyGradient),
+                Content = "Map ringan! " .. removedCount .. " objek dekoratif disembunyikan.",
+                Duration = 4,
+                Icon = "zap",
+            })
+
+        else
+            -- 🔄 Kembalikan semua objek
+            local restored = 0
+            for _, obj in pairs(hiddenParts) do
+                if obj and obj:IsA("BasePart") then
+                    obj.Transparency = 0
+                    obj.CanCollide = true
+                    restored += 1
+                end
+            end
+            hiddenParts = {}
+
+            WindUI:Notify({
+                Title = GradientText("AntiLag OFF", galaxyGradient),
+                Content = "Map dikembalikan. " .. restored .. " objek dipulihkan.",
+                Duration = 4,
+                Icon = "cpu",
+            })
+        end
+    end
+})
+
+-- 💬 CREDITS TAB
+local CreditsTab = Window:Tab({
+    Title = GradientText("Credits", galaxyGradient),
+    Icon = "info",
+})
+
+CreditsTab:Paragraph({
+    Title = GradientText("Credits For Me", galaxyGradient),
+    Desc = "Developed by: @louissxe\nScript Support: @louissxe",
+})
