@@ -22,28 +22,28 @@ end
 
 -- 💖 Gradient: Pink → Ungu → Biru muda
 local galaxyGradient = { 
-Color3.fromRGB(180,0,255), Color3.fromRGB(0,255,255)
+    Color3.fromRGB(205, 133, 63),  -- Caramel
+    Color3.fromRGB(255, 224, 178)  -- Light toffee
 }
-
 -- 🌌 Buat Window utama
 local Window = WindUI:CreateWindow({
-    Title = GradientText("LS Hub Galaxy", galaxyGradient),
+    Title = GradientText("LS Hub Soft", galaxyGradient),
     Icon = "sparkles",
     Author = "made by @louissxe | discord.gg/Ntm5KyTN5",
-    Folder = "LS Hub Galaxy",
+    Folder = "LS Hub Soft",
     Theme = "Dark",
-    Size = UDim2.fromOffset(560, 350),
+    Size = UDim2.fromOffset(560, 360),
 
     -- 🖼 Background
-    Background = "https://cdn.discordapp.com/attachments/1427347866523009166/1427372951736684584/Picsart_25-10-14_02-07-46-199.jpg?ex=68eea027&is=68ed4ea7&hm=7b01987edbbb87409f625abd57aa6711b46db20f35772e3b89a7fa1c072e60a9&.png",
-    BackgroundImageTransparency = 0.25,
+    Background = "https://cdn.discordapp.com/attachments/1427347866523009166/1427394108145668278/Picsart_25-10-14_03-34-07-652.jpg?ex=68eeb3db&is=68ed625b&hm=32abe031cbf2c380d678ea0f98bbe9d5da6e54257840c53e2f35701e125c7d99&.png",
+    BackgroundImageTransparency = 0,
     HidePanelBackground = false,
     SideBarWidth = 200,
     ToggleKey = Enum.KeyCode.G,
 
     User = {
         Enabled = true,
-        Anonymous = true,
+        Anonymous = false,
         Callback = function()
             WindUI:Notify({
                 Title = GradientText("User ID", galaxyGradient),
@@ -53,6 +53,25 @@ local Window = WindUI:CreateWindow({
         end,
     },
 })
+
+-- 🔊 Suara notifikasi saat UI muncul
+local SoundService = game:GetService("SoundService")
+local NOTIF_SOUND_ID = "rbxassetid://6026984224" -- efek klik bawaan Roblox
+
+local function playNotification()
+    local old = SoundService:FindFirstChild("VoidHub_Notification")
+    if old then old:Destroy() end
+
+    local notif = Instance.new("Sound")
+    notif.Name = "VoidHub_Notification"
+    notif.SoundId = NOTIF_SOUND_ID
+    notif.Volume = 3
+    notif.PlayOnRemove = true
+    notif.Parent = SoundService
+    notif:Destroy()
+end
+
+playNotification()
 
 -- 🔔 Notifikasi saat UI terbuka
 WindUI:Notify({
@@ -68,7 +87,7 @@ local HomeTab = Window:Tab({
 })
 
 HomeTab:Paragraph({
-    Title = GradientText("Welcome To LS Hub Galaxy", galaxyGradient),
+    Title = GradientText("Welcome To LS Hub", galaxyGradient),
     Desc = "UI with a cosmic black & white galaxy theme",
 })
 
