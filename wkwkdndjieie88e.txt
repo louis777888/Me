@@ -1,4 +1,3 @@
--- 🚀 Load WindUI versi terbaru
 local WindUI = loadstring(game:HttpGet("https://github.com/Footagesus/WindUI/releases/latest/download/main.lua"))()
 
 -- 🌈 Fungsi teks gradient (3 warna lembut)
@@ -20,23 +19,23 @@ local function GradientText(text, colors)
     return result
 end
 
--- 💖 Gradient: Pink → Ungu → Biru muda
-local galaxyGradient = { 
-    Color3.fromRGB(205, 133, 63),  -- Caramel
-    Color3.fromRGB(255, 224, 178)  -- Light toffee
+local galaxyGradient = {
+    Color3.fromRGB(255, 0, 0),     -- Merah terang (topi Luffy)
+    Color3.fromRGB(255, 215, 0)   -- Kuning emas (pinggiran topi
 }
+
 -- 🌌 Buat Window utama
 local Window = WindUI:CreateWindow({
-    Title = GradientText("LS Hub Soft", galaxyGradient),
+    Title = GradientText("LS Hub VIP", galaxyGradient),
     Icon = "sparkles",
     Author = "made by @louissxe | discord.gg/Ntm5KyTN5",
-    Folder = "LS Hub Soft",
+    Folder = "LS Hub VIP",
     Theme = "Dark",
     Size = UDim2.fromOffset(560, 360),
 
     -- 🖼 Background
-    Background = "https://cdn.discordapp.com/attachments/1427347866523009166/1427394108145668278/Picsart_25-10-14_03-34-07-652.jpg?ex=68eeb3db&is=68ed625b&hm=32abe031cbf2c380d678ea0f98bbe9d5da6e54257840c53e2f35701e125c7d99&.png",
-    BackgroundImageTransparency = 0,
+    Background = "https://cdn.discordapp.com/attachments/1427347866523009166/1428384272267476992/quality_restoration_20251016210846845.png?ex=68f24e04&is=68f0fc84&hm=04194a99652de1856f03f300c165fe21a625b35f6ae68877fffa159842f93625&.png",
+    BackgroundImageTransparency = 0.5,
     HidePanelBackground = false,
     SideBarWidth = 200,
     ToggleKey = Enum.KeyCode.G,
@@ -53,6 +52,7 @@ local Window = WindUI:CreateWindow({
         end,
     },
 })
+
 
 -- 🔊 Suara notifikasi saat UI muncul
 local SoundService = game:GetService("SoundService")
@@ -711,104 +711,184 @@ ToolsTab:Button({
     end,
 })
 
--- ==========================================================
--- 🌀 FLING PLAYER (terintegrasi dengan dropdown)
--- ==========================================================
-local function SkidFling(TargetPlayer)
-    local Player = LocalPlayer
-    local Character = Player.Character
-    if not Character then return end
-    local Root = Character:FindFirstChild("HumanoidRootPart")
-    if not Root then return end
+local Players = game:GetService("Players")
+local LocalPlayer = Players.LocalPlayer
+local RunService = game:GetService("RunService")
+local Camera = workspace.CurrentCamera
 
-    local TargetChar = TargetPlayer.Character
-    if not TargetChar then return end
-    local TRoot = TargetChar:FindFirstChild("HumanoidRootPart") or TargetChar:FindFirstChild("Torso") or TargetChar:FindFirstChild("Head")
-    if not TRoot then return end
+local flingTarget = nil
+local spectating = false
+local flingActive = false
+local flingConn = nil
+local spectateConn = nil
 
-    -- Simpan posisi sebelum fling (buat balik nanti)
-    local OriginalCFrame = Root.CFrame
+-- 🌀 Tab Fling
+local FlingTab = Window:Tab({
+    Title = GradientText("Fling Player Fish it", galaxyGradient),
+    Icon = "user-x",
+})
 
-    -- Hentikan fling aktif sebelumnya
-    if ActiveFling then
-        ActiveFling:Disconnect()
-        ActiveFling = nil
+-- 🧍 Fungsi ambil daftar player
+local function GetPlayerNames()
+    local names = {}
+    for _, player in pairs(Players:GetPlayers()) do
+        if player ~= LocalPlayer then
+            table.insert(names, player.Name)
+        end
     end
-    for _, bv in pairs(Root:GetChildren()) do
-        if bv:IsA("BodyVelocity") or bv:IsA("BodyGyro") then bv:Destroy() end
-    end
+    return names
+end
 
-    pcall(function()
-        sethiddenproperty(Player, "SimulationRadius", math.huge)
-        sethiddenproperty(Player, "MaximumSimulationRadius", math.huge)
-    end)
+-- 🧩 Dropdown pilih player
+local playerDropdown = FlingTab:Dropdown({
+    Title = GradientText("List Player", galaxyGradient),
+    Values = GetPlayerNames(),
+    Default = nil,
+    Callback = function(value)
+        flingTarget = Players:FindFirstChild(value)
+        print("Target dipilih:", value)
+    end,
+})
 
-    Root.AssemblyLinearVelocity = Vector3.zero
-    Root.RotVelocity = Vector3.zero
+-- 🔁 Tombol refresh
+FlingTab:Button({
+    Title = GradientText("Refresh", galaxyGradient),
+    Callback = function()
+        playerDropdown:SetValues(GetPlayerNames())
+        print("Daftar player diperbarui.")
+    end,
+})
 
-    local BV = Instance.new("BodyVelocity")
-    BV.MaxForce = Vector3.new(1e9, 1e9, 1e9)
-    BV.Velocity = Vector3.zero
-    BV.Parent = Root
-
-    local BG = Instance.new("BodyGyro")
-    BG.MaxTorque = Vector3.new(1e9, 1e9, 1e9)
-    BG.P = 1e5
-    BG.CFrame = Root.CFrame
-    BG.Parent = Root
-
-    local startTime = tick()
-    local t = 0
-    ActiveFling = RunService.Heartbeat:Connect(function()
-        if not TRoot or not TRoot:IsDescendantOf(workspace) or tick() - startTime > 3 then
-            ActiveFling:Disconnect()
-            ActiveFling = nil
-            BV:Destroy()
-            BG:Destroy()
-
-            -- 🧭 Balik ke posisi semula setelah fling
-            task.delay(0.1, function()
-                if Character and Root then
-                    Root.CFrame = OriginalCFrame
-                    Root.AssemblyLinearVelocity = Vector3.zero
-                    Root.RotVelocity = Vector3.zero
+-- 👁️ Toggle Spectate Player
+FlingTab:Toggle({
+    Title = GradientText("Spectate", galaxyGradient),
+    Default = false,
+    Callback = function(value)
+        spectating = value
+        if spectateConn then
+            spectateConn:Disconnect()
+            spectateConn = nil
+        end
+        if spectating then
+            spectateConn = RunService.RenderStepped:Connect(function()
+                if flingTarget and flingTarget.Character and flingTarget.Character:FindFirstChild("Humanoid") then
+                    Camera.CameraSubject = flingTarget.Character.Humanoid
+                else
+                    Camera.CameraSubject = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid")
                 end
             end)
+            print("🎥 Spectate ON")
+        else
+            Camera.CameraSubject = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid")
+            print("🚫 Spectate OFF")
+        end
+    end,
+})
+
+local flingActive = false
+local flingConn = nil
+local bv = nil
+local originalCFrame = nil
+local originalVehicleCFrame = nil
+local tickOffset = 0
+
+-- Fungsi paksa balik posisi kapal + karakter
+local function forceResetPosition(vehicleModel, hrp, originalVehicleCFrame, originalCFrame)
+    if vehicleModel and originalVehicleCFrame then
+        for i = 1, 5 do
+            vehicleModel:SetPrimaryPartCFrame(originalVehicleCFrame)
+            task.wait(0.05)
+        end
+    end
+
+    if hrp and originalCFrame then
+        for i = 1, 5 do
+            hrp.CFrame = originalCFrame
+            task.wait(0.05)
+        end
+    end
+end
+
+-- Toggle Fling
+FlingTab:Toggle({
+    Title = GradientText("Fling", galaxyGradient),
+    Default = false,
+    Callback = function(value)
+        flingActive = value
+        local myChar = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
+        local myHRP = myChar:FindFirstChild("HumanoidRootPart")
+        local myHumanoid = myChar:FindFirstChild("Humanoid")
+        if not myHRP or not myHumanoid then return warn("Tidak menemukan HumanoidRootPart atau Humanoid!") end
+
+        -- Cek kapal
+        local vehicleModel = nil
+        if myHumanoid.SeatPart then
+            vehicleModel = myHumanoid.SeatPart:FindFirstAncestorOfClass("Model")
+        end
+        if not vehicleModel then
+            warn("Naik kapal dulu sebelum Fling!")
+            flingActive = false
             return
         end
 
-        t += 1
-        local pulse = math.sin(tick() * 120)
-        local offsetX = math.sin(tick() * 80) * 0.5
-        local offsetY = math.abs(pulse) * 2.5  -- getaran naik turun di tengah badan target
-        local offsetZ = math.cos(tick() * 80) * 0.5
+        -- Stop fling lama
+        if flingConn then flingConn:Disconnect() flingConn = nil end
+        if bv then bv:Destroy() bv = nil end
 
-        Root.CFrame = TRoot.CFrame * CFrame.new(offsetX, offsetY, offsetZ)
-        BG.CFrame = TRoot.CFrame
+        if flingActive then
+            if not flingTarget or not flingTarget.Character or not flingTarget.Character:FindFirstChild("HumanoidRootPart") then
+                warn("Pilih target dulu!")
+                flingActive = false
+                return
+            end
 
-        -- 🚀 Dorongan besar — vertikal dominan (biar target mental jauh)
-        local dir = (TRoot.Position - Root.Position).unit
-        local power = 5e4 + math.abs(pulse) * 3e5  -- skala dorongan tinggi
-        BV.Velocity = (dir * power) + Vector3.new(0, 6e5, 0)
+            local targetHRP = flingTarget.Character.HumanoidRootPart
+            originalCFrame = myHRP.CFrame
+            originalVehicleCFrame = vehicleModel.PrimaryPart.CFrame
 
-        -- 🛡️ Stabilkan diri biar gak mental
-        if t % 5 == 0 then
-            Root.AssemblyLinearVelocity = Vector3.zero
-            Root.RotVelocity = Vector3.zero
-        end
-    end)
-end
+            -- Pastikan karakter duduk / menempel di kapal
+            myHumanoid.Sit = true
+            task.wait(0.1) -- tunggu physics update
 
--- 🔘 Tombol Fling Player dari dropdown
-ToolsTab:Button({
-    Title = GradientText("Fling Player", galaxyGradient),
-    Description = "Dorong player target dengan gaya ekstrem",
-    Callback = function()
-        if targetPlayer and targetPlayer ~= LocalPlayer then
-            Message("Fling", "Menyerang " .. targetPlayer.Name, 2)
-            task.spawn(SkidFling, targetPlayer)
+            -- BodyVelocity untuk karakter
+            bv = Instance.new("BodyVelocity")
+            bv.MaxForce = Vector3.new(math.huge, math.huge, math.huge)
+            bv.Velocity = Vector3.new(0,0,0)
+            bv.Parent = myHRP
+
+            tickOffset = 0
+            flingConn = RunService.Heartbeat:Connect(function(dt)
+                if not flingTarget or not flingTarget.Character or not flingTarget.Character:FindFirstChild("HumanoidRootPart") then return end
+                tickOffset = tickOffset + dt * 200
+
+                local yOffset = math.sin(tickOffset * 100) * 3
+                local xOffset = math.random(-3,3)
+                local zOffset = math.random(-3,3)
+
+                local targetPos = targetHRP.Position + Vector3.new(xOffset, 3 + yOffset, zOffset)
+
+                -- Update posisi kapal + karakter
+                if vehicleModel.PrimaryPart then
+                    vehicleModel:SetPrimaryPartCFrame(CFrame.new(targetPos))
+                end
+
+                -- BodyVelocity arah target untuk karakter
+                local direction = (targetHRP.Position - myHRP.Position).unit
+                bv.Velocity = direction * 150
+            end)
+
+            print("Fling ON + Kapal + Karakter aktif")
         else
-            Message("Error", "Pilih player dulu!", 2)
+            -- Stop fling
+            if flingConn then flingConn:Disconnect() flingConn = nil end
+            if bv then bv:Destroy() bv = nil end
+
+            -- Paksa balik ke posisi awal kapal + karakter
+            forceResetPosition(vehicleModel, myHRP, originalVehicleCFrame, originalCFrame)
+
+            -- Pastikan karakter duduk / stabil
+            myHumanoid.Sit = true
+            print("Fling OFF, kapal + karakter kembali ke posisi semula")
         end
     end,
 })
@@ -1802,6 +1882,410 @@ MorphingTab:Button({
     end
 })
 
+-- 🚶‍♂️ AUTO WALK TAB
+local AutoWalkYaHaYukTab = Window:Tab({
+    Title = GradientText("Mount YaHaYuk", galaxyGradient),
+    Icon = "bot", -- bisa diganti ke ikon lain seperti "bot" atau "zap"
+})
+
+------------------------------------------------------------
+-- 🧭 PATH REPLAY SYSTEM (by @louissxe)
+------------------------------------------------------------
+
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local LocalPlayer = Players.LocalPlayer
+
+local root = LocalPlayer.Character and LocalPlayer.Character:WaitForChild("HumanoidRootPart")
+if not root then
+    warn("❌ Tidak menemukan HumanoidRootPart")
+end
+
+-- ⚙️ Path Lengkap (Checkpoint 1–6)
+local Path = {
+    -- 🟢 Checkpoint 1
+    {pos = Vector3.new(-952,169,880), jump=false},
+    {pos = Vector3.new(-877,169,851), jump=false},
+    {pos = Vector3.new(-877,169,850), jump=false},
+    {pos = Vector3.new(-864,170,851), jump=true},
+    {pos = Vector3.new(-855,170,851), jump=true},
+    {pos = Vector3.new(-846,170,851), jump=true},
+    {pos = Vector3.new(-837,170,851), jump=true},
+    {pos = Vector3.new(-827,170,851), jump=true},
+    {pos = Vector3.new(-819,170,851), jump=true},
+    {pos = Vector3.new(-810,170,851), jump=true},
+    {pos = Vector3.new(-802,170,851), jump=true},
+    {pos = Vector3.new(-793,170,851), jump=true},
+    {pos = Vector3.new(-781,171,850), jump=true},
+    {pos = Vector3.new(-743,171,850), jump=false},
+    {pos = Vector3.new(-734,174,854), jump=true},
+    {pos = Vector3.new(-729,177,848), jump=true},
+    {pos = Vector3.new(-719,183,846), jump=true},
+    {pos = Vector3.new(-711,184,844), jump=true},
+    {pos = Vector3.new(-694,184,842), jump=false},
+    {pos = Vector3.new(-687,188,839), jump=true},
+    {pos = Vector3.new(-680,194,833), jump=true},
+    {pos = Vector3.new(-673,201,839), jump=true},
+    {pos = Vector3.new(-666,207,833), jump=true},
+    {pos = Vector3.new(-658,212,838), jump=true},
+    {pos = Vector3.new(-650,218,836), jump=true},
+    {pos = Vector3.new(-650,218,767), jump=false},
+    {pos = Vector3.new(-536,218,767), jump=false},
+    {pos = Vector3.new(-529,226,767), jump=true},
+    {pos = Vector3.new(-523,232,763), jump=true},
+    {pos = Vector3.new(-514,239,766), jump=true},
+    {pos = Vector3.new(-508,245,762), jump=true},
+    {pos = Vector3.new(-501,250,768), jump=true},
+    {pos = Vector3.new(-486,247,766), jump=true},
+    {pos = Vector3.new(-417,248,787), jump=false},
+
+    -- 🟡 Checkpoint 2
+    {pos = Vector3.new(-439,247,713), jump=false},
+    {pos = Vector3.new(-441,249,702), jump=true},
+    {pos = Vector3.new(-436,254,695), jump=true},
+    {pos = Vector3.new(-423,261,693), jump=true},
+    {pos = Vector3.new(-416,271,685), jump=true},
+    {pos = Vector3.new(-406,271,684), jump=true},
+    {pos = Vector3.new(-403,276,679), jump=true},
+    {pos = Vector3.new(-399,282,686), jump=true},
+    {pos = Vector3.new(-387,286,686), jump=true},
+    {pos = Vector3.new(-369,283,684), jump=false},
+    {pos = Vector3.new(-359,288,683), jump=true},
+    {pos = Vector3.new(-344,298,681), jump=true},
+    {pos = Vector3.new(-330,302,681), jump=true},
+    {pos = Vector3.new(-322,302,674), jump=false},
+    {pos = Vector3.new(-323,310,663), jump=true},
+    {pos = Vector3.new(-318,319,653), jump=true},
+    {pos = Vector3.new(-311,322,644), jump=true},
+    {pos = Vector3.new(-302,333,634), jump=true},
+    {pos = Vector3.new(-308,347,629), jump=true},
+    {pos = Vector3.new(-317,356,628), jump=true},
+    {pos = Vector3.new(-325,364,622), jump=true},
+    {pos = Vector3.new(-335,370,615), jump=true},
+    {pos = Vector3.new(-342,376,605), jump=true},
+    {pos = Vector3.new(-339,387,590), jump=true},
+    {pos = Vector3.new(-326,387,525), jump=false},
+
+    -- 🔵 Checkpoint 3
+    {pos = Vector3.new(-310,386,556), jump=false},
+    {pos = Vector3.new(-300,388,557), jump=true},
+    {pos = Vector3.new(-288,390,557), jump=true},
+    {pos = Vector3.new(-269,393,559), jump=true},
+    {pos = Vector3.new(-254,391,562), jump=true},
+    {pos = Vector3.new(-239,397,563), jump=true},
+    {pos = Vector3.new(-222,397,559), jump=true},
+    {pos = Vector3.new(-208,398,563), jump=true},
+    {pos = Vector3.new(-194,398,559), jump=true},
+    {pos = Vector3.new(-178,399,568), jump=true},
+    {pos = Vector3.new(-164,403,574), jump=true},
+    {pos = Vector3.new(-152,406,573), jump=true},
+    {pos = Vector3.new(-145,400,562), jump=true},
+    {pos = Vector3.new(-127,392,563), jump=true},
+    {pos = Vector3.new(-96,404,558), jump=false},
+    {pos = Vector3.new(-62,402,558), jump=false},
+    {pos = Vector3.new(-31,414,560), jump=false},
+    {pos = Vector3.new(13,415,560), jump=false},
+    {pos = Vector3.new(27,418,560), jump=true},
+    {pos = Vector3.new(40,419,559), jump=true},
+    {pos = Vector3.new(53,419,559), jump=true},
+    {pos = Vector3.new(73,413,558), jump=true},
+    {pos = Vector3.new(138,413,555), jump=false},
+    {pos = Vector3.new(159,413,551), jump=false},
+    {pos = Vector3.new(188,429,547), jump=true},
+    {pos = Vector3.new(199,425,542), jump=true},
+    {pos = Vector3.new(294,428,494), jump=true},
+
+    -- 🟣 Checkpoint 4
+    {pos = Vector3.new(312,431,496), jump=false},
+    {pos = Vector3.new(325,432,495), jump=true},
+    {pos = Vector3.new(339,433,496), jump=true},
+    {pos = Vector3.new(350,437,491), jump=true},
+    {pos = Vector3.new(353,437,478), jump=true},
+    {pos = Vector3.new(361,440,470), jump=true},
+    {pos = Vector3.new(371,442,477), jump=true},
+    {pos = Vector3.new(380,445,487), jump=true},
+    {pos = Vector3.new(391,450,487), jump=true},
+    {pos = Vector3.new(401,453,487), jump=true},
+    {pos = Vector3.new(401,461,478), jump=true},
+    {pos = Vector3.new(401,462,470), jump=true},
+    {pos = Vector3.new(400,465,462), jump=true},
+    {pos = Vector3.new(396,456,451), jump=true},
+    {pos = Vector3.new(405,459,439), jump=false},
+    {pos = Vector3.new(402,475,426), jump=false},
+    {pos = Vector3.new(392,474,412), jump=false},
+    {pos = Vector3.new(379,473,400), jump=false},
+    {pos = Vector3.new(370,472,374), jump=false},
+    {pos = Vector3.new(349,486,363), jump=false},
+    {pos = Vector3.new(325,489,366), jump=false},
+
+    -- 🔴 Checkpoint 5
+    {pos = Vector3.new(366,481,353), jump=false},
+    {pos = Vector3.new(342,465,318), jump=false},
+    {pos = Vector3.new(344,468,307), jump=true},
+    {pos = Vector3.new(346,466,293), jump=true},
+    {pos = Vector3.new(346,467,280), jump=true},
+    {pos = Vector3.new(337,468,268), jump=true},
+    {pos = Vector3.new(332,471,258), jump=true},
+    {pos = Vector3.new(322,465,252), jump=true},
+    {pos = Vector3.new(316,460,242), jump=true},
+    {pos = Vector3.new(303,441,239), jump=true},
+    {pos = Vector3.new(292,433,249), jump=true},
+    {pos = Vector3.new(282,426,260), jump=true},
+    {pos = Vector3.new(274,426,271), jump=true},
+    {pos = Vector3.new(264,428,281), jump=true},
+    {pos = Vector3.new(251,419,289), jump=true},
+    {pos = Vector3.new(238,420,286), jump=true},
+    {pos = Vector3.new(228,416,288), jump=true},
+    {pos = Vector3.new(217,409,287), jump=true},
+    {pos = Vector3.new(204,397,280), jump=true},
+    {pos = Vector3.new(187,381,286), jump=true},
+    {pos = Vector3.new(173,374,287), jump=true},
+    {pos = Vector3.new(162,368,287), jump=true},
+    {pos = Vector3.new(151,368,296), jump=true},
+    {pos = Vector3.new(139,368,287), jump=true},
+    {pos = Vector3.new(139,368,276), jump=true},
+    {pos = Vector3.new(132,358,266), jump=true},
+    {pos = Vector3.new(130,345,254), jump=true},
+    {pos = Vector3.new(125,336,243), jump=true},
+    {pos = Vector3.new(119,323,231), jump=true},
+    {pos = Vector3.new(112,318,222), jump=true},
+    {pos = Vector3.new(103,316,224), jump=true},
+    {pos = Vector3.new(96,321,221), jump=true},
+    {pos = Vector3.new(93,315,210), jump=true},
+    {pos = Vector3.new(85,302,199), jump=true},
+    {pos = Vector3.new(75,285,185), jump=true},
+    {pos = Vector3.new(69,280,169), jump=true},
+    {pos = Vector3.new(65,274,156), jump=true},
+    {pos = Vector3.new(57,254,141), jump=true},
+    {pos = Vector3.new(58,247,126), jump=true},
+    {pos = Vector3.new(25,245,105), jump=false},
+    {pos = Vector3.new(25,246,92), jump=true},
+    {pos = Vector3.new(31,246,82), jump=false},
+    {pos = Vector3.new(39,252,73), jump=true},
+    {pos = Vector3.new(40,252,59), jump=false},
+    {pos = Vector3.new(48,255,50), jump=true},
+    {pos = Vector3.new(56,255,41), jump=true},
+    {pos = Vector3.new(53,254,28), jump=true},
+    {pos = Vector3.new(48,254,16), jump=true},
+    {pos = Vector3.new(41,254,5), jump=true},
+    {pos = Vector3.new(32,254,-4), jump=true},
+    {pos = Vector3.new(29,254,-16), jump=true},
+    {pos = Vector3.new(21,254,-27), jump=true},
+    {pos = Vector3.new(20,257,-38), jump=true},
+    {pos = Vector3.new(29,257,-50), jump=true},
+    {pos = Vector3.new(32,254,-64), jump=true},
+    {pos = Vector3.new(37,254,-73), jump=true},
+    {pos = Vector3.new(49,262,-79), jump=true},
+    {pos = Vector3.new(58,262,-86), jump=true},
+    {pos = Vector3.new(69,254,-95), jump=true},
+    {pos = Vector3.new(73,254,-105), jump=true},
+    {pos = Vector3.new(82,262,-113), jump=true},
+    {pos = Vector3.new(93,262,-119), jump=true},
+    {pos = Vector3.new(105,266,-125), jump=true},
+    {pos = Vector3.new(114,266,-133), jump=true},
+    {pos = Vector3.new(126,262,-138), jump=true},
+    {pos = Vector3.new(138,262,-139), jump=true},
+    {pos = Vector3.new(152,250,-142), jump=true},
+    {pos = Vector3.new(165,251,-140), jump=false},
+    {pos = Vector3.new(174,255,-137), jump=false},
+    {pos = Vector3.new(186,249,-137), jump=false},
+    {pos = Vector3.new(213,244,-118), jump=false},
+    {pos = Vector3.new(221,250,-118), jump=false},
+    {pos = Vector3.new(222,278,-116), jump=false}, -- naik tangga
+    {pos = Vector3.new(254,276,-127), jump=false},
+    {pos = Vector3.new(253,305,-131), jump=false}, -- naik tangga
+    {pos = Vector3.new(248,312,-141), jump=false},
+    {pos = Vector3.new(232,313,-145), jump=false},
+    
+    -- 🟢 Checkpoint 6
+    {pos = Vector3.new(178,313,-209), jump=false},
+    {pos = Vector3.new(166,316,-208), jump=true},
+    {pos = Vector3.new(152,315,-207), jump=true},
+    {pos = Vector3.new(137,315,-205), jump=true},
+    {pos = Vector3.new(125,316,-204), jump=true},
+    {pos = Vector3.new(113,318,-203), jump=true},
+    {pos = Vector3.new(103,322,-204), jump=true},
+    {pos = Vector3.new(89,318,-202), jump=true},
+    {pos = Vector3.new(78,326,-202), jump=true},
+    {pos = Vector3.new(74,330,-201), jump=true},
+    {pos = Vector3.new(64,341,-195), jump=true},
+    {pos = Vector3.new(53,346,-199), jump=true},
+    {pos = Vector3.new(38,346,-199), jump=true},
+    {pos = Vector3.new(13,351,-198), jump=true},
+    {pos = Vector3.new(1,354,-193), jump=true},
+    {pos = Vector3.new(-13,360,-197), jump=true},
+    {pos = Vector3.new(-26,368,-190), jump=true},
+    {pos = Vector3.new(-31,379,-187), jump=true},
+    {pos = Vector3.new(-37,385,-195), jump=true},
+    {pos = Vector3.new(-47,389,-186), jump=true},
+    {pos = Vector3.new(-59,394,-185), jump=true},
+    {pos = Vector3.new(-69,400,-182), jump=true},
+    {pos = Vector3.new(-66,406,-189), jump=true},
+    {pos = Vector3.new(-73,414,-186), jump=true},
+    {pos = Vector3.new(-73,419,-191), jump=true},
+    {pos = Vector3.new(-80,427,-186), jump=true},
+    {pos = Vector3.new(-92,432,-189), jump=true},
+    {pos = Vector3.new(-102,441,-194), jump=true},
+    {pos = Vector3.new(-109,445,-188), jump=true},
+    {pos = Vector3.new(-122,443,-187), jump=true},
+    {pos = Vector3.new(-135,446,-187), jump=true},
+    {pos = Vector3.new(-149,453,-190), jump=true},
+    {pos = Vector3.new(-158,458,-184), jump=true},
+    {pos = Vector3.new(-167,469,-190), jump=true},
+    {pos = Vector3.new(-174,477,-185), jump=true},
+    {pos = Vector3.new(-178,483,-192), jump=true},
+    {pos = Vector3.new(-178,496,-186), jump=true},
+    {pos = Vector3.new(-180,503,-193), jump=true},
+    {pos = Vector3.new(-187,511,-200), jump=true},
+    {pos = Vector3.new(-195,517,-209), jump=true},
+    {pos = Vector3.new(-207,516,-210), jump=true},
+    {pos = Vector3.new(-211,523,-216), jump=true},
+    {pos = Vector3.new(-220,530,-221), jump=true},
+    {pos = Vector3.new(-210,537,-225), jump=true},
+    {pos = Vector3.new(-219,544,-228), jump=true},
+    {pos = Vector3.new(-230,543,-233), jump=true},
+    {pos = Vector3.new(-239,543,-241), jump=true},
+    {pos = Vector3.new(-248,545,-249), jump=true},
+    {pos = Vector3.new(-258,544,-257), jump=true},
+{pos = Vector3.new(-265,557,-256), jump=true},
+{pos = Vector3.new(-275,562,-263), jump=true},
+{pos = Vector3.new(-283,569,-269), jump=true},
+{pos = Vector3.new(-291,575,-275), jump=true},
+{pos = Vector3.new(-299,584,-281), jump=true},
+{pos = Vector3.new(-314,604,-291), jump=true},
+{pos = Vector3.new(-318,610,-293), jump=true},
+{pos = Vector3.new(-325,624,-299), jump=true},
+{pos = Vector3.new(-333,632,-304), jump=true},
+{pos = Vector3.new(-344,635,-309), jump=true},
+{pos = Vector3.new(-350,642,-319), jump=true},
+{pos = Vector3.new(-367,643,-320), jump=true},
+{pos = Vector3.new(-377,648,-328), jump=true},
+{pos = Vector3.new(-391,652,-332), jump=true},
+{pos = Vector3.new(-405,657,-342), jump=true},
+{pos = Vector3.new(-414,659,-351), jump=true},
+{pos = Vector3.new(-423,659,-353), jump=true},
+{pos = Vector3.new(-430,663,-360), jump=true},
+{pos = Vector3.new(-437,666,-368), jump=true},
+{pos = Vector3.new(-447,667,-369), jump=true},
+{pos = Vector3.new(-453,666,-374), jump=true},
+{pos = Vector3.new(-462,671,-379), jump=true},
+{pos = Vector3.new(-470,677,-383), jump=false},
+{pos = Vector3.new(-484,677,-417), jump=true},
+{pos = Vector3.new(-469,677,-447), jump=true},
+{pos = Vector3.new(-468,680,-464), jump=true},
+{pos = Vector3.new(-466,679,-475), jump=true},
+{pos = Vector3.new(-462,688,-491), jump=true},
+{pos = Vector3.new(-451,707,-516), jump=true},
+{pos = Vector3.new(-448,719,-532), jump=true},
+{pos = Vector3.new(-450,733,-549), jump=true},
+{pos = Vector3.new(-451,744,-554), jump=true},
+{pos = Vector3.new(-450,748,-564), jump=true},
+{pos = Vector3.new(-456,758,-570), jump=true},
+{pos = Vector3.new(-462,765,-576), jump=true},
+{pos = Vector3.new(-471,772,-583), jump=true},
+{pos = Vector3.new(-479,776,-590), jump=true},
+{pos = Vector3.new(-487,780,-596), jump=true},
+{pos = Vector3.new(-494,787,-601), jump=true},
+{pos = Vector3.new(-500,789,-611), jump=true},
+{pos = Vector3.new(-509,793,-618), jump=true},
+{pos = Vector3.new(-520,798,-619), jump=true},
+{pos = Vector3.new(-532,801,-622), jump=true},
+{pos = Vector3.new(-571,806,-627), jump=false},
+{pos = Vector3.new(-587,836,-605), jump=true},
+{pos = Vector3.new(-578,850,-587), jump=true},
+{pos = Vector3.new(-606,886,-561), jump=true},
+{pos = Vector3.new(-614,903,-555), jump=true},
+{pos = Vector3.new(-614,905,-551), jump=false},
+{pos = Vector3.new(-619,912,-496), jump=false},
+
+} -- ⬅️ ini penting banget, nutup tabel Path
+
+
+-- ⚙️ Setting
+local walkSpeed = 24
+local jumpHeight = 10
+local isReplaying = false
+
+-- 🌀 Fungsi gerakan smooth
+local function moveSmooth(startPos, endPos, isJump)
+    local duration = (startPos - endPos).Magnitude / walkSpeed
+    local t = 0
+    local conn
+
+    conn = RunService.Heartbeat:Connect(function(dt)
+        t += dt / duration
+        if t >= 1 then
+            root.CFrame = CFrame.new(endPos)
+            conn:Disconnect()
+            return
+        end
+
+        local pos = startPos:Lerp(endPos, t)
+        if isJump then
+            local arc = math.sin(math.pi * t) * jumpHeight
+            pos = Vector3.new(pos.X, pos.Y + arc, pos.Z)
+        end
+
+        root.CFrame = CFrame.new(pos)
+    end)
+
+    task.wait(duration)
+end
+
+-- 🔁 Tombol replay di tab Auto Walk
+AutoWalkYaHaYukTab:Button({
+    Title = GradientText("Start Auto Walk", galaxyGradient),
+    Description = "Gerakan otomatis sesuai path",
+    Callback = function()
+        if isReplaying then
+            WindUI:Notify({
+                Title = "⚠️ Auto Walk Sedang Berjalan",
+                Content = "Tunggu sampai selesai!",
+                Duration = 3
+            })
+            return
+        end
+
+        isReplaying = true
+        WindUI:Notify({
+            Title = GradientText("Auto Walk Dimulai", galaxyGradient),
+            Content = "Karakter mulai bergerak...",
+            Duration = 3
+        })
+
+        task.spawn(function()
+            for i = 1, #Path - 1 do
+                if not isReplaying then break end
+                local current = Path[i]
+                local nextPos = Path[i + 1]
+                moveSmooth(current.pos, nextPos.pos, nextPos.jump)
+            end
+
+            WindUI:Notify({
+                Title = GradientText("Auto Walk Selesai", galaxyGradient),
+                Content = "Karakter berhenti di posisi akhir!",
+                Duration = 3
+            })
+
+            isReplaying = false
+        end)
+    end
+})
+
+-- ⏹️ Tombol stop auto walk
+AutoWalkYaHaYukTab:Button({
+    Title = GradientText("Stop Auto Walk", galaxyGradient),
+    Description = "Berhentikan gerakan langsung",
+    Callback = function()
+        isReplaying = false
+        WindUI:Notify({
+            Title = "Auto Walk Dihentikan",
+            Content = "Gerakan otomatis dihentikan manual.",
+            Duration = 3
+        })
+    end
+})
+
 -- 💬 TAB: Detect Admin
 local DetectTab = Window:Tab({
     Title = GradientText("Detect Admins", galaxyGradient),
@@ -2031,7 +2515,7 @@ MiscTab:Dropdown({
         WindUI:SetTheme(value)
         SaveTheme(value)
         WindUI:Notify({
-            Title = GradientText("Tema DiUnah", galaxyGradient),
+            Title = GradientText("Tema DiUbah", galaxyGradient),
             Content = "Sekarang tema-nya: " .. value,
             Duration = 3,
             Icon = "palette",
@@ -2209,3 +2693,4 @@ CreditsTab:Paragraph({
     Title = GradientText("Credits For Me", galaxyGradient),
     Desc = "Developed by: @louissxe\nScript Support: @louissxe",
 })
+
