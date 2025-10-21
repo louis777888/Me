@@ -1,0 +1,3542 @@
+-- 🚀 Load WindUI versi terbaru
+local WindUI = loadstring(game:HttpGet("https://github.com/Footagesus/WindUI/releases/latest/download/main.lua"))()
+
+-- 🌈 Fungsi teks gradient (3 warna lembut)
+local function GradientText(text, colors)
+    local result = ""
+    local length = #text
+    for i = 1, length do
+        local t = (i - 1) / math.max(length - 1, 1)
+        local colorIndex = math.floor(t * (#colors - 1)) + 1
+        local nextIndex = math.clamp(colorIndex + 1, 1, #colors)
+        local ratio = (t * (#colors - 1)) % 1
+
+        local c1, c2 = colors[colorIndex], colors[nextIndex]
+        local r = math.floor((c1.R + (c2.R - c1.R) * ratio) * 255)
+        local g = math.floor((c1.G + (c2.G - c1.G) * ratio) * 255)
+        local b = math.floor((c1.B + (c2.B - c1.B) * ratio) * 255)
+        result ..= string.format('<font color="rgb(%d,%d,%d)">%s</font>', r, g, b, text:sub(i, i))
+    end
+    return result
+end
+
+-- 💖 Gradient: Pink → Ungu → Biru muda
+local galaxyGradient = { 
+Color3.fromRGB(180,0,255), Color3.fromRGB(0,255,255)
+}
+
+-- 🪐 Buat Window Utama
+local Window = WindUI:CreateWindow({
+    Title = GradientText("LS Hub - VIP", galaxyGradient),
+    Icon = "crown",
+    Author = "made by @louissxe",
+    Folder = "LS Hub - VIP",
+    Size = UDim2.fromOffset(460, 290),
+    MinSize = Vector2.new(460, 290),
+    MaxSize = Vector2.new(850, 560),
+    Transparent = true,
+    Theme = "Light",
+    Resizable = true,
+    SideBarWidth = 200,
+    ToggleKey = Enum.KeyCode.G,
+    BackgroundImageTransparency = 0.42,
+    HideSearchBar = true,
+    ScrollBarEnabled = false,
+    User = {
+        Enabled = true,
+        Anonymous = true,
+        Callback = function()
+            print("User clicked!")
+        end,
+    }
+})
+
+-- 🔊 Suara notifikasi saat UI muncul
+local SoundService = game:GetService("SoundService")
+local NOTIF_SOUND_ID = "rbxassetid://6026984224" -- efek klik bawaan Roblox
+
+local function playNotification()
+    local old = SoundService:FindFirstChild("VoidHub_Notification")
+    if old then old:Destroy() end
+
+    local notif = Instance.new("Sound")
+    notif.Name = "VoidHub_Notification"
+    notif.SoundId = NOTIF_SOUND_ID
+    notif.Volume = 3
+    notif.PlayOnRemove = true
+    notif.Parent = SoundService
+    notif:Destroy()
+end
+
+playNotification()
+
+-- 🔔 Notifikasi saat UI terbuka
+WindUI:Notify({
+    Title = GradientText("Welcome To LS - VIP", galaxyGradient),
+    Content = "Welcome back, explorer!",
+    Duration = 4
+})
+
+
+-- 🏠 TAB HOME
+local HomeTab = Window:Tab({
+    Title = GradientText("Home", galaxyGradient),
+    Icon = "house",
+})
+
+HomeTab:Paragraph({
+    Title = GradientText("Welcome To LS Hub", galaxyGradient),
+    Desc = "UI with a cosmic black & white galaxy theme",
+})
+
+-- 📰 Changelog / Update Info
+HomeTab:Paragraph({
+    Title = GradientText("Information", galaxyGradient),
+    Desc = "✅ Ring Part Lebih Power Full\n" ..
+           "✅ Fling  Player Fish it\n"..
+           "✅ Auto Walk  YaHaYuk\n" ..
+           "✅ UI performa meningkat 40%",
+})
+
+-- ▶️ Tiktok Showcase
+HomeTab:Button({
+    Title = GradientText("TikTok Showcase", galaxyGradient),
+    Desc = "Lihat demo LS Hub on TikTok",
+    Callback = function()
+        pcall(function()
+            setclipboard("https://youtube.com/@lsxvoid")
+            print("TikTok link copied!")
+        end)
+    end,
+})
+
+-- ⚡ TAB UTAMA (MAIN)
+local MainTab = Window:Tab({
+    Title = GradientText("Main", galaxyGradient),
+    Icon = "bird",
+})
+
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+
+local LocalPlayer = Players.LocalPlayer
+local camera = workspace.CurrentCamera
+
+local flying = false
+local ascending = false
+local descending = false
+local bodyGyro, bodyVel, hbConn
+local upButton, downButton
+
+local flySpeed = 100
+local SMOOTH_FACTOR = 10
+
+
+
+-- === Fungsi mulai/stop fly ===
+local function startFlight(char)
+	if bodyGyro or bodyVel then return end
+	if not (char and char.Parent) then return end
+
+	local hrp = char:FindFirstChild("HumanoidRootPart")
+	local hum = char:FindFirstChild("Humanoid")
+	if not (hrp and hum and camera) then return end
+
+	hum.PlatformStand = true
+
+	bodyGyro = Instance.new("BodyGyro")
+	bodyGyro.P = 9e4
+	bodyGyro.MaxTorque = Vector3.new(1e9, 1e9, 1e9)
+	bodyGyro.Parent = hrp
+
+	bodyVel = Instance.new("BodyVelocity")
+	bodyVel.MaxForce = Vector3.new(1e9, 1e9, 1e9)
+	bodyVel.Velocity = Vector3.zero
+	bodyVel.Parent = hrp
+
+	if upButton and downButton then
+		upButton.Visible = true
+		downButton.Visible = true
+	end
+
+	hbConn = RunService.Heartbeat:Connect(function(dt)
+		if not (bodyGyro and bodyVel) then return end
+		local c = LocalPlayer.Character
+		if not c then return end
+
+		local hrp2 = c:FindFirstChild("HumanoidRootPart")
+		local hum2 = c:FindFirstChild("Humanoid")
+		if not (hrp2 and hum2) then return end
+
+		hum2.PlatformStand = true
+
+		local moveDir = hum2.MoveDirection
+		local velocity = Vector3.zero
+		local lookVector = camera.CFrame.LookVector
+
+		-- arah maju full 3D (ikut kamera)
+		if moveDir.Magnitude > 0 then
+			velocity = lookVector * flySpeed
+		end
+
+		-- naik/turun manual
+		if ascending then
+			velocity += Vector3.new(0, flySpeed, 0)
+		elseif descending then
+			velocity += Vector3.new(0, -flySpeed, 0)
+		end
+
+		-- halus
+		bodyVel.Velocity = bodyVel.Velocity:Lerp(velocity, math.clamp(SMOOTH_FACTOR * dt, 0, 1))
+
+		-- ✈️ FULL kamera arah (atas/bawah juga ikut)
+		local camCF = camera.CFrame
+		bodyGyro.CFrame = CFrame.lookAt(hrp2.Position, hrp2.Position + camCF.LookVector)
+	end)
+end
+
+local function stopFlight()
+	if hbConn then hbConn:Disconnect() end
+
+	local c = LocalPlayer.Character
+	local hum = c and c:FindFirstChild("Humanoid")
+	if hum then hum.PlatformStand = false end
+
+	if bodyGyro then bodyGyro:Destroy() end
+	if bodyVel then bodyVel:Destroy() end
+	bodyGyro, bodyVel, hbConn = nil, nil, nil
+
+	if upButton and downButton then
+		upButton.Visible = false
+		downButton.Visible = false
+	end
+end
+
+
+-- === WindUI ===
+MainTab:Toggle({
+	Title = GradientText("Fly Mode", galaxyGradient),
+	Default = false,
+	Callback = function(state)
+		flying = state
+		if flying then
+			startFlight(LocalPlayer.Character)
+		else
+			stopFlight()
+		end
+	end,
+})
+
+MainTab:Slider({
+	Title = GradientText("Fly Speed", galaxyGradient),
+	Step = 1,
+	Value = { Min = 10, Max = 200, Default = flySpeed },
+	Callback = function(v)
+		flySpeed = v
+	end,
+})
+
+-- 🦘 Infinite Jump (Lompatan Tak Terbatas)
+local infJumpEnabled = false
+MainTab:Toggle({
+    Title = GradientText("Infinite Jump", galaxyGradient),
+    Default = false,
+    Callback = function(state)
+        infJumpEnabled = state
+        local UIS = game:GetService("UserInputService")
+        UIS.JumpRequest:Connect(function()
+            if infJumpEnabled then
+                local player = game.Players.LocalPlayer
+                if player and player.Character and player.Character:FindFirstChildOfClass("Humanoid") then
+                    player.Character:FindFirstChildOfClass("Humanoid"):ChangeState(Enum.HumanoidStateType.Jumping)
+                end
+            end
+        end)
+        print("Infinite Jump:", state)
+    end
+})
+
+-- 🏃 WalkSpeed Permanen dengan Toggle
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local LocalPlayer = Players.LocalPlayer
+
+local CurrentWalkSpeed = 16
+local PermanentSpeed = false -- Toggle On/Off
+local LastHumanoid
+
+-- Slider UI
+MainTab:Slider({
+    Title = GradientText("WalkSpeed", galaxyGradient),
+    Step = 1,
+    Value = {
+        Min = 10,
+        Max = 100,
+        Default = 16,
+    },
+    Callback = function(value)
+        CurrentWalkSpeed = math.floor(value)
+        -- Langsung apply ke humanoid kalau toggle aktif
+        if PermanentSpeed then
+            local char = LocalPlayer.Character
+            if char then
+                local humanoid = char:FindFirstChildOfClass("Humanoid")
+                if humanoid then
+                    humanoid.WalkSpeed = CurrentWalkSpeed
+                end
+            end
+        end
+        print("WalkSpeed:", CurrentWalkSpeed)
+    end
+})
+
+-- Toggle UI
+MainTab:Toggle({
+    Title = GradientText("PermanentSpeed", galaxyGradient),
+    Default = false,
+    Callback = function(value)
+        PermanentSpeed = value
+        local char = LocalPlayer.Character
+        if char then
+            local humanoid = char:FindFirstChildOfClass("Humanoid")
+            if humanoid then
+                if PermanentSpeed then
+                    humanoid.WalkSpeed = CurrentWalkSpeed
+                else
+                    humanoid.WalkSpeed = 16 -- Reset ke default
+                end
+            end
+        end
+        print("PermanentSpeed:", PermanentSpeed)
+    end
+})
+
+-- Fungsi apply speed ke humanoid baru
+local function applySpeed(humanoid)
+    if PermanentSpeed and humanoid and humanoid.WalkSpeed ~= CurrentWalkSpeed then
+        humanoid.WalkSpeed = CurrentWalkSpeed
+    end
+end
+
+-- Event respawn
+LocalPlayer.CharacterAdded:Connect(function(char)
+    task.defer(function()
+        local humanoid = char:FindFirstChildOfClass("Humanoid")
+        if humanoid then
+            LastHumanoid = humanoid
+            applySpeed(humanoid)
+        end
+    end)
+end)
+
+-- Heartbeat loop: cek humanoid dan speed
+RunService.Heartbeat:Connect(function()
+    local char = LocalPlayer.Character
+    if not char then return end
+
+    local humanoid = char:FindFirstChildOfClass("Humanoid")
+    if not humanoid then return end
+
+    if humanoid ~= LastHumanoid then
+        LastHumanoid = humanoid
+        applySpeed(humanoid)
+    elseif humanoid.WalkSpeed ~= CurrentWalkSpeed then
+        applySpeed(humanoid)
+    end
+end)
+
+-- Inisialisasi pertama
+if LocalPlayer.Character then
+    local humanoid = LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
+    if humanoid then
+        LastHumanoid = humanoid
+        applySpeed(humanoid)
+    end
+end
+
+-- 🦘 Tinggi Lompatan (Jump Height)
+MainTab:Slider({
+    Title = GradientText("JumpHeight", galaxyGradient),
+    Step = 1,
+    Value = {
+        Min = 20,
+        Max = 200,
+        Default = 50,
+    },
+    Callback = function(value)
+        local player = game.Players.LocalPlayer
+        if player and player.Character and player.Character:FindFirstChildOfClass("Humanoid") then
+            local humanoid = player.Character:FindFirstChildOfClass("Humanoid")
+            -- Gunakan JumpPower jika aktif, kalau tidak pakai JumpHeight
+            if humanoid.UseJumpPower then
+                humanoid.JumpPower = value
+            else
+                humanoid.JumpHeight = value / 10 -- konversi agar terasa sama
+            end
+        end
+        print("Jump Height:", value)
+    end
+})
+
+-- 🎥 Bidang Pandang (Field of View / FOV)
+MainTab:Slider({
+    Title = GradientText("Sudut Pandang", galaxyGradient),
+    Step = 1,
+    Value = {
+        Min = 60,
+        Max = 120,
+        Default = 70,
+    },
+    Callback = function(value)
+        local camera = workspace.CurrentCamera
+        if camera then
+            camera.FieldOfView = value
+        end
+        print("FOV set ke:", value)
+    end
+})
+
+-- 🔁 Tombol Reset Nilai Default
+MainTab:Button({
+    Title = GradientText("Reset Default", galaxyGradient),
+    Callback = function()
+        local player = game.Players.LocalPlayer
+        local camera = workspace.CurrentCamera
+
+        if player and player.Character and player.Character:FindFirstChildOfClass("Humanoid") then
+            local humanoid = player.Character:FindFirstChildOfClass("Humanoid")
+            humanoid.WalkSpeed = 16
+            if humanoid.UseJumpPower then
+                humanoid.JumpPower = 50
+            else
+                humanoid.JumpHeight = 5
+            end
+        end
+
+        if camera then
+            camera.FieldOfView = 70
+        end
+
+        print("Semua nilai dikembalikan ke default!")
+    end
+})
+
+-- 🧰 TOOLS TAB
+local Players = game:GetService("Players")
+local LocalPlayer = Players.LocalPlayer
+
+local ToolsTab = Window:Tab({
+    Title = GradientText("Tools", galaxyGradient),
+    Icon = "cpu",
+})
+
+local shiftLockEnabled = false
+local shiftLockMode = "Back"
+
+-- Toggle Shift Lock di WindUI
+ToolsTab:Toggle({
+    Title = GradientText("Shiftlock", galaxyGradient),
+    Default = false,
+    Callback = function(state)
+        shiftLockEnabled = state
+        LocalPlayer.DevEnableMouseLock = state
+        print("Shift Lock:", state and "ON ✅" or "OFF ❌")
+    end,
+})
+
+-- Dropdown Front/Back Mode di WindUI
+ToolsTab:Dropdown({
+    Title = GradientText("Mode Shiftlock", galaxyGradient),
+    Values = {"Back", "Front"},
+    Default = shiftLockMode,
+    Callback = function(value)
+        shiftLockMode = value
+        print("Shift Lock Mode:", shiftLockMode)
+    end,
+})
+
+-- RenderStep update HumanoidRootPart orientation
+RunService:BindToRenderStep("ShiftLockWindUI", Enum.RenderPriority.Camera.Value + 1, function()
+    if shiftLockEnabled and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
+        local hrp = LocalPlayer.Character.HumanoidRootPart
+        local cam = workspace.CurrentCamera
+        local dir = Vector3.new(cam.CFrame.LookVector.X, 0, cam.CFrame.LookVector.Z)
+        if shiftLockMode == "Front" then
+            dir = -dir
+        end
+        if dir.Magnitude > 0 then
+            hrp.CFrame = CFrame.new(hrp.Position, hrp.Position + dir)
+        end
+    end
+end)
+
+-- ====== ESP V2: Avatar + Rounded HealthBar ======
+local espEnabled = false
+local espConnections = {}
+
+local function createESP(player)
+    if player == LocalPlayer then return end
+    if not player.Character or not player.Character:FindFirstChild("HumanoidRootPart") then return end
+
+    local hrp = player.Character:WaitForChild("HumanoidRootPart")
+    local humanoid = player.Character:FindFirstChildOfClass("Humanoid")
+
+    -- Buat Billboard GUI utama
+    local billboard = Instance.new("BillboardGui")
+    billboard.Name = "LSxESP"
+    billboard.AlwaysOnTop = true
+    billboard.Size = UDim2.new(0, 230, 0, 60)
+    billboard.StudsOffset = Vector3.new(0, 3, 0)
+    billboard.Parent = hrp
+
+    -- Frame utama (background semi transparan)
+    local mainFrame = Instance.new("Frame")
+    mainFrame.Size = UDim2.new(1, 0, 1, 0)
+    mainFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
+    mainFrame.BackgroundTransparency = 0.3
+    mainFrame.BorderSizePixel = 0
+    mainFrame.Parent = billboard
+
+    local cornerMain = Instance.new("UICorner")
+    cornerMain.CornerRadius = UDim.new(0, 8)
+    cornerMain.Parent = mainFrame
+
+    -- Avatar (headshot)
+    local avatar = Instance.new("ImageLabel")
+    avatar.Size = UDim2.new(0, 45, 0, 45)
+    avatar.Position = UDim2.new(0, 5, 0.5, -22)
+    avatar.BackgroundTransparency = 1
+    avatar.Image = "rbxthumb://type=AvatarHeadShot&id=" .. player.UserId .. "&w=100&h=100"
+    avatar.Parent = mainFrame
+
+    local avatarCorner = Instance.new("UICorner")
+    avatarCorner.CornerRadius = UDim.new(1, 0)
+    avatarCorner.Parent = avatar
+
+    -- Nama Player
+    local nameLabel = Instance.new("TextLabel")
+    nameLabel.BackgroundTransparency = 1
+    nameLabel.Size = UDim2.new(1, -60, 0.5, 0)
+    nameLabel.Position = UDim2.new(0, 60, 0, 2)
+    nameLabel.Font = Enum.Font.GothamBold
+    nameLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+    nameLabel.TextStrokeTransparency = 0.5
+    nameLabel.TextScaled = true
+    nameLabel.Text = player.DisplayName .. " (@" .. player.Name .. ")"
+    nameLabel.TextXAlignment = Enum.TextXAlignment.Left
+    nameLabel.Parent = mainFrame
+
+    -- Frame untuk Health Bar
+    local hpFrame = Instance.new("Frame")
+    hpFrame.Size = UDim2.new(1, -75, 0, 10)
+    hpFrame.Position = UDim2.new(0, 60, 1, -15)
+    hpFrame.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+    hpFrame.BorderSizePixel = 0
+    hpFrame.Parent = mainFrame
+
+    local hpCorner = Instance.new("UICorner")
+    hpCorner.CornerRadius = UDim.new(0, 6)
+    hpCorner.Parent = hpFrame
+
+    local hpBar = Instance.new("Frame")
+    hpBar.Size = UDim2.new(1, 0, 1, 0)
+    hpBar.BackgroundColor3 = Color3.fromRGB(0, 255, 100)
+    hpBar.BorderSizePixel = 0
+    hpBar.Parent = hpFrame
+
+    local hpBarCorner = Instance.new("UICorner")
+    hpBarCorner.CornerRadius = UDim.new(0, 6)
+    hpBarCorner.Parent = hpBar
+
+    -- Update HealthBar real-time
+    local conn = RunService.RenderStepped:Connect(function()
+        if not espEnabled or not player.Character or not player.Character:FindFirstChild("Humanoid") then
+            billboard.Enabled = false
+            return
+        end
+        billboard.Enabled = true
+        local health = player.Character.Humanoid.Health
+        local maxHealth = player.Character.Humanoid.MaxHealth
+        hpBar.Size = UDim2.new(math.clamp(health / maxHealth, 0, 1), 0, 1, 0)
+
+        -- Warna HP berubah sesuai health
+        if health / maxHealth > 0.6 then
+            hpBar.BackgroundColor3 = Color3.fromRGB(0, 255, 100)
+        elseif health / maxHealth > 0.3 then
+            hpBar.BackgroundColor3 = Color3.fromRGB(255, 200, 0)
+        else
+            hpBar.BackgroundColor3 = Color3.fromRGB(255, 70, 70)
+        end
+    end)
+
+    espConnections[player] = {gui = billboard, conn = conn}
+end
+
+local function removeESP(player)
+    if espConnections[player] then
+        espConnections[player].conn:Disconnect()
+        if espConnections[player].gui then
+            espConnections[player].gui:Destroy()
+        end
+        espConnections[player] = nil
+    end
+end
+
+local function enableESP()
+    for _, player in ipairs(Players:GetPlayers()) do
+        if player ~= LocalPlayer then
+            createESP(player)
+        end
+    end
+    Players.PlayerAdded:Connect(createESP)
+    Players.PlayerRemoving:Connect(removeESP)
+end
+
+local function disableESP()
+    for _, data in pairs(espConnections) do
+        data.conn:Disconnect()
+        if data.gui then
+            data.gui:Destroy()
+        end
+    end
+    espConnections = {}
+end
+
+-- 🔘 Toggle ESP di WindUI
+ToolsTab:Toggle({
+    Title = GradientText("ESP (Ava + Health)", galaxyGradient),
+    Default = false,
+    Callback = function(state)
+        espEnabled = state
+        if state then
+            enableESP()
+            print("ESP Enabled ✅")
+        else
+            disableESP()
+            print("ESP Disabled ❌")
+        end
+    end
+})
+
+-- 🧩 Services
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local camera = workspace.CurrentCamera
+local LocalPlayer = Players.LocalPlayer
+
+-- ====== SPECTATE + TELEPORT + FLING (Unified Dropdown) ======
+local targetPlayer = nil
+local spectating = false
+
+-- Ambil daftar nama player selain LocalPlayer
+local function getPlayerNames()
+    local names = {}
+    for _, p in pairs(Players:GetPlayers()) do
+        if p ~= LocalPlayer then
+            table.insert(names, p.Name)
+        end
+    end
+    return names
+end
+
+-- Dropdown untuk pilih target player
+local playerDropdown = ToolsTab:Dropdown({
+    Title = GradientText("Pilih Player", galaxyGradient),
+    Values = getPlayerNames(),
+    Default = nil,
+    Callback = function(value)
+        targetPlayer = Players:FindFirstChild(value)
+        print("🎯 Target Player:", value)
+    end,
+})
+
+-- 🔁 Tombol untuk refresh manual daftar player
+ToolsTab:Button({
+    Title = GradientText("Refresh Player", galaxyGradient),
+    Callback = function()
+        if playerDropdown then
+            playerDropdown:UpdateValues(getPlayerNames())
+            print("✅ Daftar player berhasil di-refresh!")
+        end
+    end,
+})
+
+-- ⏱️ Auto refresh setiap 5 detik
+task.spawn(function()
+    while task.wait(5) do
+        if playerDropdown then
+            playerDropdown:UpdateValues(getPlayerNames())
+        end
+    end
+end)
+
+-- 🎥 Toggle untuk Spectate Player
+ToolsTab:Toggle({
+    Title = GradientText("Spectate Player", galaxyGradient),
+    Default = false,
+    Callback = function(state)
+        spectating = state
+        if spectating and targetPlayer and targetPlayer.Character then
+            print("👀 Spectating:", targetPlayer.Name)
+        else
+            print("🛑 Stopped spectating")
+        end
+    end,
+})
+
+-- Update kamera agar mengikuti targetPlayer saat spectate aktif
+RunService:BindToRenderStep("Spectate", Enum.RenderPriority.Camera.Value + 1, function()
+    if spectating and targetPlayer and targetPlayer.Character then
+        local humanoid = targetPlayer.Character:FindFirstChildOfClass("Humanoid")
+        if humanoid then
+            camera.CameraSubject = humanoid
+            camera.CameraType = Enum.CameraType.Custom
+        end
+    else
+        camera.CameraSubject = LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
+        camera.CameraType = Enum.CameraType.Custom
+    end
+end)
+
+-- 🚀 Tombol untuk teleport ke player target
+ToolsTab:Button({
+    Title = GradientText("Teleport Player", galaxyGradient),
+    Callback = function()
+        if targetPlayer and targetPlayer.Character and targetPlayer.Character:FindFirstChild("HumanoidRootPart") then
+            local hrp = targetPlayer.Character.HumanoidRootPart
+            if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
+                LocalPlayer.Character.HumanoidRootPart.CFrame = hrp.CFrame + Vector3.new(2, 0, 2)
+                print("📍 Teleported to:", targetPlayer.Name)
+            end
+        else
+            print("⚠️ Player target tidak valid!")
+        end
+    end,
+})
+
+local Players = game:GetService("Players")
+local LocalPlayer = Players.LocalPlayer
+local RunService = game:GetService("RunService")
+local Camera = workspace.CurrentCamera
+
+local flingTarget = nil
+local spectating = false
+local flingActive = false
+local flingConn = nil
+local spectateConn = nil
+
+-- 🌀 Tab Fling
+local FlingTab = Window:Tab({
+    Title = GradientText("Fling Player Fish it", galaxyGradient),
+    Icon = "user-x",
+})
+
+-- 🧍 Fungsi ambil daftar player
+local function GetPlayerNames()
+    local names = {}
+    for _, player in pairs(Players:GetPlayers()) do
+        if player ~= LocalPlayer then
+            table.insert(names, player.Name)
+        end
+    end
+    return names
+end
+
+-- 🧩 Dropdown pilih player
+local playerDropdown = FlingTab:Dropdown({
+    Title = GradientText("List Player", galaxyGradient),
+    Values = GetPlayerNames(),
+    Default = nil,
+    Callback = function(value)
+        flingTarget = Players:FindFirstChild(value)
+        print("Target dipilih:", value)
+    end,
+})
+
+-- 🔁 Tombol refresh
+FlingTab:Button({
+    Title = GradientText("Refresh", galaxyGradient),
+    Callback = function()
+        playerDropdown:SetValues(GetPlayerNames())
+        print("Daftar player diperbarui.")
+    end,
+})
+
+-- 👁️ Toggle Spectate Player
+FlingTab:Toggle({
+    Title = GradientText("Spectate", galaxyGradient),
+    Default = false,
+    Callback = function(value)
+        spectating = value
+        if spectateConn then
+            spectateConn:Disconnect()
+            spectateConn = nil
+        end
+        if spectating then
+            spectateConn = RunService.RenderStepped:Connect(function()
+                if flingTarget and flingTarget.Character and flingTarget.Character:FindFirstChild("Humanoid") then
+                    Camera.CameraSubject = flingTarget.Character.Humanoid
+                else
+                    Camera.CameraSubject = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid")
+                end
+            end)
+            print("🎥 Spectate ON")
+        else
+            Camera.CameraSubject = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid")
+            print("🚫 Spectate OFF")
+        end
+    end,
+})
+
+local flingActive = false
+local flingConn = nil
+local bv = nil
+local originalCFrame = nil
+local originalVehicleCFrame = nil
+local tickOffset = 0
+
+-- Fungsi paksa balik posisi kapal + karakter
+local function forceResetPosition(vehicleModel, hrp, originalVehicleCFrame, originalCFrame)
+    if vehicleModel and originalVehicleCFrame then
+        for i = 1, 5 do
+            vehicleModel:SetPrimaryPartCFrame(originalVehicleCFrame)
+            task.wait(0.05)
+        end
+    end
+
+    if hrp and originalCFrame then
+        for i = 1, 5 do
+            hrp.CFrame = originalCFrame
+            task.wait(0.05)
+        end
+    end
+end
+
+-- Toggle Fling
+FlingTab:Toggle({
+    Title = GradientText("Fling", galaxyGradient),
+    Default = false,
+    Callback = function(value)
+        flingActive = value
+        local myChar = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
+        local myHRP = myChar:FindFirstChild("HumanoidRootPart")
+        local myHumanoid = myChar:FindFirstChild("Humanoid")
+        if not myHRP or not myHumanoid then return warn("Tidak menemukan HumanoidRootPart atau Humanoid!") end
+
+        -- Cek kapal
+        local vehicleModel = nil
+        if myHumanoid.SeatPart then
+            vehicleModel = myHumanoid.SeatPart:FindFirstAncestorOfClass("Model")
+        end
+        if not vehicleModel then
+            warn("Naik kapal dulu sebelum Fling!")
+            flingActive = false
+            return
+        end
+
+        -- Stop fling lama
+        if flingConn then flingConn:Disconnect() flingConn = nil end
+        if bv then bv:Destroy() bv = nil end
+
+        if flingActive then
+            if not flingTarget or not flingTarget.Character or not flingTarget.Character:FindFirstChild("HumanoidRootPart") then
+                warn("Pilih target dulu!")
+                flingActive = false
+                return
+            end
+
+            local targetHRP = flingTarget.Character.HumanoidRootPart
+            originalCFrame = myHRP.CFrame
+            originalVehicleCFrame = vehicleModel.PrimaryPart.CFrame
+
+            -- Pastikan karakter duduk / menempel di kapal
+            myHumanoid.Sit = true
+            task.wait(0.1) -- tunggu physics update
+
+            -- BodyVelocity untuk karakter
+            bv = Instance.new("BodyVelocity")
+            bv.MaxForce = Vector3.new(math.huge, math.huge, math.huge)
+            bv.Velocity = Vector3.new(0,0,0)
+            bv.Parent = myHRP
+
+            tickOffset = 0
+            flingConn = RunService.Heartbeat:Connect(function(dt)
+                if not flingTarget or not flingTarget.Character or not flingTarget.Character:FindFirstChild("HumanoidRootPart") then return end
+                tickOffset = tickOffset + dt * 200
+
+                local yOffset = math.sin(tickOffset * 100) * 3
+                local xOffset = math.random(-3,3)
+                local zOffset = math.random(-3,3)
+
+                local targetPos = targetHRP.Position + Vector3.new(xOffset, 3 + yOffset, zOffset)
+
+                -- Update posisi kapal + karakter
+                if vehicleModel.PrimaryPart then
+                    vehicleModel:SetPrimaryPartCFrame(CFrame.new(targetPos))
+                end
+
+                -- BodyVelocity arah target untuk karakter
+                local direction = (targetHRP.Position - myHRP.Position).unit
+                bv.Velocity = direction * 150
+            end)
+
+            print("Fling ON + Kapal + Karakter aktif")
+        else
+            -- Stop fling
+            if flingConn then flingConn:Disconnect() flingConn = nil end
+            if bv then bv:Destroy() bv = nil end
+
+            -- Paksa balik ke posisi awal kapal + karakter
+            forceResetPosition(vehicleModel, myHRP, originalVehicleCFrame, originalCFrame)
+
+            -- Pastikan karakter duduk / stabil
+            myHumanoid.Sit = true
+            print("Fling OFF, kapal + karakter kembali ke posisi semula")
+        end
+    end,
+})
+
+-- 💫 RING PART TAB (Full logic ported from your old script)
+local RingTab = Window:Tab({
+    Title = GradientText("Ring Part", galaxyGradient),
+    Icon = "rotate-3d",
+})
+
+-- Services & player refs
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local PhysicsService = game:GetService("PhysicsService")
+local workspace = workspace
+local LocalPlayer = Players.LocalPlayer
+
+-- Ensure collision group exists
+pcall(function() PhysicsService:CreateCollisionGroup("OrbitParts") end)
+pcall(function() PhysicsService:CollisionGroupSetCollidable("OrbitParts", "Default", false) end)
+pcall(function() PhysicsService:CollisionGroupSetCollidable("OrbitParts", "OrbitParts", false) end)
+
+-- ======= State (copied names to keep parity) =======
+local scanRadius = 1000
+local orbitRadius = 100
+local orbitSpeed = 10
+local vibrateStrength = 5
+local vibrateSpeed = 50
+local vibrateAxis = "All"
+local orbitMode = "Horizontal"
+
+local partsList = {}
+local originalProps = {}
+local selectedParts = {}
+local basePositions = {}
+local ringEnabled = false
+
+local countLabelText = "" -- will be updated in UI notifications
+
+-- HRP safety
+local HRP
+local function refreshHRP()
+    local char = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
+    HRP = char:WaitForChild("HumanoidRootPart")
+end
+refreshHRP()
+LocalPlayer.CharacterAdded:Connect(refreshHRP)
+local function getHRP()
+    if HRP and HRP.Parent then return HRP end
+    refreshHRP(); return HRP
+end
+
+-- helpers: try set collision group (robust)
+local function trySetCollisionGroup(part, group)
+    pcall(function()
+        if PhysicsService and PhysicsService.SetPartCollisionGroup then
+            PhysicsService:SetPartCollisionGroup(part, group)
+        else
+            pcall(function() part.CollisionGroup = group end)
+        end
+    end)
+end
+
+local function breakAllConstraints(part)
+    if not part or not part.Parent then return end
+    local model = part:FindFirstAncestorWhichIsA("Model")
+    if model and model:FindFirstChildOfClass("Humanoid") then return end
+    if part:FindFirstAncestorWhichIsA("Accessory") then return end
+    local nuke = {"Weld","WeldConstraint","Motor6D","BallSocketConstraint","HingeConstraint",
+        "CylinderConstraint","PrismaticConstraint","RopeConstraint","SpringConstraint",
+        "RodConstraint","Glue","ManualWeld","Snap"}
+    for _, ch in ipairs(part:GetChildren()) do
+        if table.find(nuke, ch.ClassName) then
+            pcall(function() ch:Destroy() end)
+        end
+    end
+end
+
+-- scanParts (same logic, cap & filtering)
+local function scanParts(radius)
+    partsList = {}
+    originalProps = {}
+
+    local hrp = getHRP()
+    if not hrp then return 0 end
+
+    local candidates = {}
+    for _, obj in ipairs(workspace:GetDescendants()) do
+        if obj:IsA("BasePart") and not obj.Anchored and obj.Parent then
+            local model = obj:FindFirstAncestorWhichIsA("Model")
+            local isPlayerItem = (model and model:FindFirstChildOfClass("Humanoid")) or obj:FindFirstAncestorWhichIsA("Accessory")
+            if not isPlayerItem then
+                local ok, dist = pcall(function() return (obj.Position - hrp.Position).Magnitude end)
+                if ok and dist and dist <= radius then
+                    candidates[#candidates+1] = {part=obj, d=dist}
+                end
+            end
+        end
+    end
+
+    table.sort(candidates, function(a,b) return a.d < b.d end)
+    local CAP = 140
+    for i = 1, math.min(#candidates, CAP) do
+        local p = candidates[i].part
+        local cpp, massless, colGroup, canTouch, canQuery
+        pcall(function() cpp = p.CustomPhysicalProperties end)
+        pcall(function() massless = p.Massless end)
+        local okCol, col = pcall(function() return p.CollisionGroup end)
+        if okCol then colGroup = col end
+        pcall(function() canTouch = p.CanTouch end)
+        pcall(function() canQuery = p.CanQuery end)
+
+        partsList[#partsList+1] = p
+        originalProps[p] = {
+            CanCollide = p.CanCollide,
+            CustomPhysicalProperties = cpp,
+            CollisionGroup = (colGroup ~= nil and colGroup) or "Default",
+            Massless = massless,
+            CanTouch = canTouch,
+            CanQuery = canQuery,
+            OrigPosition = p.Position,
+        }
+    end
+    return #partsList
+end
+
+-- preparePartsForOrbit & restoreParts (keep BodyPosition logic)
+local function preparePartsForOrbit()
+    for _, part in ipairs(partsList) do
+        if part and part.Parent and not part.Anchored then
+            breakAllConstraints(part)
+            trySetCollisionGroup(part, "OrbitParts")
+            pcall(function()
+                part.CanCollide = false
+                part.Massless = true
+                part.CanTouch = false
+                part.CanQuery = false
+                part.CustomPhysicalProperties = PhysicalProperties.new(0.05, 0.3, 0.5, 1000, 0)
+            end)
+
+            local bp = part:FindFirstChild("OrbitBP") or Instance.new("BodyPosition")
+            bp.Name = "OrbitBP"
+            bp.MaxForce = Vector3.new(1e9,1e9,1e9)
+            bp.P = 1000000
+            bp.D = 8000
+            bp.Parent = part
+        end
+    end
+end
+
+local function restoreParts()
+    for _, part in ipairs(partsList) do
+        if part and part.Parent then
+            local bp = part:FindFirstChild("OrbitBP")
+            if bp then pcall(function() bp:Destroy() end) end
+            local orig = originalProps[part]
+            if orig then
+                pcall(function()
+                    part.CanCollide = orig.CanCollide
+                    part.Massless = orig.Massless
+                    part.CanTouch = orig.CanTouch
+                    part.CanQuery = orig.CanQuery
+                    part.CustomPhysicalProperties = orig.CustomPhysicalProperties
+                    trySetCollisionGroup(part, orig.CollisionGroup or "Default")
+                end)
+            end
+        end
+    end
+    partsList = {}
+    originalProps = {}
+    basePositions = {}
+end
+
+-- Selection highlight functions
+local function clearHighlights()
+    for _, part in ipairs(selectedParts) do
+        local hl = part:FindFirstChild("SelectionBox")
+        if hl then hl:Destroy() end
+    end
+    selectedParts = {}
+end
+
+local function addHighlight(part)
+    if not part or not part:IsA("BasePart") then return end
+    local hl = Instance.new("SelectionBox")
+    hl.Adornee = part
+    hl.LineThickness = 0.05
+    hl.Color3 = Color3.fromRGB(100, 200, 255)
+    hl.SurfaceColor3 = Color3.fromRGB(0, 180, 255)
+    hl.Parent = part
+end
+
+-- mouse selection (local)
+local mouse = LocalPlayer:GetMouse()
+local selecting = false
+mouse.Button1Down:Connect(function()
+    if selecting then
+        local target = mouse.Target
+        if target and target:IsA("BasePart") and not table.find(selectedParts, target) then
+            table.insert(selectedParts, target)
+            addHighlight(target)
+        end
+    end
+end)
+
+-- cache base positions for vibrate
+local function cacheBasePositions()
+    basePositions = {}
+    for _, part in ipairs(selectedParts) do
+        if part and part.Parent then
+            basePositions[part] = part.Position
+        end
+    end
+end
+
+-- vibrate selected parts (when ringEnabled ON)
+local function vibrateSelectedParts()
+    for _, part in ipairs(selectedParts) do
+        if part and part.Parent and basePositions[part] then
+            local vib = Vector3.zero
+            if vibrateAxis == "X" or vibrateAxis == "All" then
+                vib = vib + Vector3.new(math.sin(tick() * vibrateSpeed) * vibrateStrength, 0, 0)
+            end
+            if vibrateAxis == "Y" or vibrateAxis == "All" then
+                vib = vib + Vector3.new(0, math.sin(tick() * (vibrateSpeed+20)) * vibrateStrength, 0)
+            end
+            if vibrateAxis == "Z" or vibrateAxis == "All" then
+                vib = vib + Vector3.new(0, 0, math.sin(tick() * (vibrateSpeed+40)) * vibrateStrength)
+            end
+
+            local bp = part:FindFirstChild("OrbitBP") or Instance.new("BodyPosition")
+            bp.Name = "OrbitBP"
+            bp.MaxForce = Vector3.new(1e9,1e9,1e9)
+            bp.P = 1000000
+            bp.D = 8000
+            bp.Parent = part
+
+            bp.Position = basePositions[part] + vib
+        end
+    end
+end
+
+-- ensure player not colliding weirdly with OrbitParts
+local function disablePlayerCollision()
+    local char = LocalPlayer.Character
+    if not char then return end
+    for _, v in ipairs(char:GetDescendants()) do
+        if v:IsA("BasePart") then
+            pcall(function() PhysicsService:SetPartCollisionGroup(v, "Default") end)
+            pcall(function() PhysicsService:CollisionGroupSetCollidable("OrbitParts", v.CollisionGroup, false) end)
+        end
+    end
+end
+disablePlayerCollision()
+LocalPlayer.CharacterAdded:Connect(function()
+    task.wait(1)
+    disablePlayerCollision()
+end)
+
+-- Run loop (mirrors old RunService.Stepped loop)
+local theta = 0
+local steppedConn
+local function startRunLoop()
+    if steppedConn and steppedConn.Connected then return end
+    steppedConn = RunService.Stepped:Connect(function(_, dt)
+        if not ringEnabled then return end
+        pcall(function() sethiddenproperty(LocalPlayer, "SimulationRadius", math.huge) end)
+        local hrp = getHRP()
+        if not hrp then return end
+
+        theta += orbitSpeed * dt
+        local center = hrp.Position + Vector3.new(0, 2.5, 0)
+
+        for i, part in ipairs(partsList) do
+            if part and part.Parent and not part.Anchored then
+                local bp = part:FindFirstChild("OrbitBP")
+                if not bp then
+                    bp = Instance.new("BodyPosition")
+                    bp.Name = "OrbitBP"
+                    bp.MaxForce = Vector3.new(1e9, 1e9, 1e9)
+                    bp.P = 1000000
+                    bp.D = 8000
+                    bp.Parent = part
+                end
+
+                local angle = (i / (#partsList > 0 and #partsList or 1)) * (2 * math.pi) + theta
+                local targetPos
+
+                if orbitMode == "Horizontal" then
+                    targetPos = center + Vector3.new(math.cos(angle) * orbitRadius, 0, math.sin(angle) * orbitRadius)
+                elseif orbitMode == "Vertical" then
+                    targetPos = center + Vector3.new(0, math.sin(angle) * orbitRadius, math.cos(angle) * orbitRadius)
+                elseif orbitMode == "Vibrate" then
+                    if not basePositions[part] then basePositions[part] = part.Position end
+                    local vib = Vector3.zero
+                    if vibrateAxis == "X" or vibrateAxis == "All" then
+                        vib += Vector3.new(math.sin(tick() * vibrateSpeed) * vibrateStrength, 0, 0)
+                    end
+                    if vibrateAxis == "Y" or vibrateAxis == "All" then
+                        vib += Vector3.new(0, math.sin(tick() * vibrateSpeed) * vibrateStrength, 0)
+                    end
+                    if vibrateAxis == "Z" or vibrateAxis == "All" then
+                        vib += Vector3.new(0, 0, math.sin(tick() * vibrateSpeed) * vibrateStrength)
+                    end
+                    targetPos = basePositions[part] + vib
+                else
+                    -- fallback to horizontal
+                    targetPos = center + Vector3.new(math.cos(angle) * orbitRadius, 0, math.sin(angle) * orbitRadius)
+                end
+
+                pcall(function() bp.Position = targetPos end)
+            end
+        end
+
+        if #selectedParts > 0 then vibrateSelectedParts() end
+    end)
+end
+
+local function stopRunLoop()
+    if steppedConn then
+        pcall(function() steppedConn:Disconnect() end)
+        steppedConn = nil
+    end
+end
+
+-- ===== WindUI controls (updated for latest WindUI) =====
+
+-- 🔍 Scan
+RingTab:Button({
+    Title = GradientText("Scan Part", galaxyGradient),
+    Desc = "Scan parts di sekitar (exclude player & accessories).",
+    Callback = function()
+        local n = scanParts(scanRadius)
+        countLabelText = "Parts: " .. n
+        WindUI:Notify({
+            Title = GradientText("Scan Selesai", galaxyGradient),
+            Content = countLabelText,
+            Duration = 3,
+            Icon = "check-circle"
+        })
+    end,
+})
+
+-- 🌀 Toggle Ring
+RingTab:Toggle({
+    Title = GradientText("Ring Now", galaxyGradient),
+    Default = false,
+    Callback = function(state)
+        ringEnabled = state
+        if state then
+            preparePartsForOrbit()
+            cacheBasePositions()
+            startRunLoop()
+            WindUI:Notify({
+                Title = GradientText("Ring Aktif", galaxyGradient),
+                Content = "Orbit started.",
+                Duration = 3,
+                Icon = "play-circle"
+            })
+        else
+            restoreParts()
+            stopRunLoop()
+            clearHighlights()
+            WindUI:Notify({
+                Title = GradientText("", galaxyGradient),
+                Content = "Parts restored.",
+                Duration = 3,
+                Icon = "pause-circle"
+            })
+        end
+    end,
+})
+
+-- 📏 Sliders (WindUI v3+)
+RingTab:Slider({
+    Title = GradientText("Scan Radius", galaxyGradient),
+    Step = 10,
+    Value = { Min = 50, Max = 2000, Default = scanRadius },
+    Callback = function(val)
+        scanRadius = math.floor(val)
+    end,
+})
+
+RingTab:Slider({
+    Title = GradientText("Orbit Radius", galaxyGradient),
+    Step = 1,
+    Value = { Min = 0, Max = 1000, Default = orbitRadius },
+    Callback = function(val)
+        orbitRadius = math.floor(val)
+    end,
+})
+
+RingTab:Slider({
+    Title = GradientText("Orbit Speed", galaxyGradient),
+    Step = 1,
+    Value = { Min = 0, Max = 500, Default = orbitSpeed },
+    Callback = function(val)
+        orbitSpeed = val
+    end,
+})
+
+RingTab:Slider({
+    Title = GradientText("Vibrate Strength", galaxyGradient),
+    Step = 1,
+    Value = { Min = 0, Max = 200, Default = vibrateStrength },
+    Callback = function(val)
+        vibrateStrength = math.floor(val)
+    end,
+})
+
+RingTab:Slider({
+    Title = GradientText("Vibrate Speed", galaxyGradient),
+    Step = 1,
+    Value = { Min = 0, Max = 200, Default = vibrateSpeed },
+    Callback = function(val)
+        vibrateSpeed = math.floor(val)
+    end,
+})
+
+-- 🧭 Dropdown (WindUI v2.5+)
+RingTab:Dropdown({
+    Title = GradientText("VibrateAxis", galaxyGradient),
+    Values = { "All", "X", "Y", "Z" },
+    Default = vibrateAxis,
+    Multi = false,
+    Callback = function(val)
+        vibrateAxis = val
+    end,
+})
+
+-- 🔄 Mode Cycle Button
+local modeOptions = { "Horizontal", "Vertical", "Vibrate" }
+local modeIndex = 1
+RingTab:Button({
+    Title = GradientText("Change Mode", galaxyGradient),
+    Desc = "Mode saat ini: " .. orbitMode,
+    Callback = function()
+        modeIndex = modeIndex % #modeOptions + 1
+        orbitMode = modeOptions[modeIndex]
+        WindUI:Notify({
+            Title = GradientText("Mode Diganti", galaxyGradient),
+            Content = "Mode: " .. orbitMode,
+            Duration = 2,
+            Icon = "refresh-cw"
+        })
+    end,
+})
+
+-- 📊 Status Info
+RingTab:Button({
+    Title = GradientText("Status", galaxyGradient),
+    Desc = "Tampilkan jumlah parts & selected parts.",
+    Callback = function()
+        WindUI:Notify({
+            Title = GradientText("Status part", galaxyGradient),
+            Content = ("Scanned: %d parts\nSelected: %d parts\nMode: %s"):format(#partsList, #selectedParts, orbitMode),
+            Duration = 4,
+            Icon = "info"
+        })
+    end,
+})
+
+-- 🎯 AIM SNAP PRO (WindUI Compatible) — Robust Kill Aura (no auto-click)
+local Players = game:GetService("Players")
+local UserInputService = game:GetService("UserInputService")
+local Camera = workspace.CurrentCamera
+local LocalPlayer = Players.LocalPlayer
+local RunService = game:GetService("RunService")
+
+-- === Variabel utama ===
+local AimSnapEnabled = false
+local SnapRange = 120
+local AimPart = "Head"
+local OnlyEnemy = true
+local VisibleCheck = true
+local ShotAuraEnabled = false
+local ShotAuraRange = 20 -- default kill-aura radius (studs)
+
+-- pastikan Window (WindUI) sudah ada sebelum bagian UI ini
+local GunTab = Window:Tab({
+    Title = GradientText("Combat Arena", galaxyGradient),
+    Icon = "crosshair",
+})
+
+-- === UI (format WindUI baru) ===
+GunTab:Toggle({
+    Title = GradientText("AimBot", galaxyGradient),
+    Description = "Auto snap kamera ke musuh saat menembak",
+    Default = false,
+    Callback = function(state) AimSnapEnabled = state end,
+})
+
+GunTab:Slider({
+    Title = GradientText("Range AimBot", galaxyGradient),
+    Step = 1,
+    Value = {Min = 30, Max = 500, Default = SnapRange},
+    Callback = function(value) SnapRange = math.floor(value) end,
+})
+
+GunTab:Toggle({
+    Title = GradientText("Only Enemy", galaxyGradient),
+    Description = "Hanya target musuh, tidak teman satu tim",
+    Default = OnlyEnemy,
+    Callback = function(state) OnlyEnemy = state end,
+})
+
+GunTab:Toggle({
+    Title = GradientText("Visible Check", galaxyGradient),
+    Description = "Hanya snap jika musuh terlihat (raycast)",
+    Default = VisibleCheck,
+    Callback = function(state) VisibleCheck = state end,
+})
+
+GunTab:Toggle({
+    Title = GradientText("Auto Shot", galaxyGradient),
+    Description = "Auto-aim (Kill Aura) - TANPA auto-click",
+    Default = ShotAuraEnabled,
+    Callback = function(state) ShotAuraEnabled = state end,
+})
+
+GunTab:Slider({
+    Title = GradientText("Range Aura", galaxyGradient),
+    Step = 1,
+    Value = {Min = 5, Max = 500, Default = ShotAuraRange},
+    Callback = function(value) ShotAuraRange = math.floor(value) end,
+})
+
+-- === Helper: pastikan character & HRP tersedia ===
+local character = LocalPlayer.Character
+if not character then
+    LocalPlayer.CharacterAdded:Wait()
+    character = LocalPlayer.Character
+end
+
+LocalPlayer.CharacterAdded:Connect(function(c) character = c end)
+
+local function getMyHRP()
+    if character and character:FindFirstChild("HumanoidRootPart") then
+        return character.HumanoidRootPart
+    end
+    return nil
+end
+
+-- === Visibility check via RaycastParams (lebih andal) ===
+local rayParams = RaycastParams.new()
+rayParams.FilterType = Enum.RaycastFilterType.Blacklist
+
+local function isVisible(targetPart)
+    if not VisibleCheck then return true end
+    if not (targetPart and targetPart.Position) then return false end
+
+    rayParams.FilterDescendantsInstances = { character }
+    local origin = Camera and Camera.CFrame and Camera.CFrame.Position or (getMyHRP() and getMyHRP().Position) or Vector3.new()
+    local direction = targetPart.Position - origin
+    local result = workspace:Raycast(origin, direction, rayParams)
+
+    if not result then
+        return true
+    end
+
+    local hit = result.Instance
+    if hit and hit:IsDescendantOf(targetPart.Parent) then
+        return true
+    end
+
+    return false
+end
+
+-- === Cari target terdekat berdasarkan HRP distance ===
+local function getClosestTarget(maxRange)
+    local myHRP = getMyHRP()
+    local originPos = myHRP and myHRP.Position or (Camera and Camera.CFrame.Position) or Vector3.new()
+    local closest = nil
+    local shortest = maxRange + 0.001
+    local myTeam = LocalPlayer.Team
+
+    for _, player in ipairs(Players:GetPlayers()) do
+        if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+            local humanoid = player.Character:FindFirstChildOfClass("Humanoid")
+            local hrp = player.Character:FindFirstChild("HumanoidRootPart")
+            if humanoid and humanoid.Health > 0 and hrp then
+                if OnlyEnemy and myTeam and player.Team == myTeam then
+                    -- skip teammate
+                else
+                    local dist = (hrp.Position - originPos).Magnitude
+                    if dist <= shortest then
+                        if isVisible(hrp) then
+                            shortest = dist
+                            closest = hrp
+                        end
+                    end
+                end
+            end
+        end
+    end
+
+    return closest
+end
+
+-- === Loop Shot Aura (throttled) ===
+task.spawn(function()
+    while true do
+        task.wait(0.08)
+        if ShotAuraEnabled then
+            local target = getClosestTarget(ShotAuraRange)
+            if target and target.Parent then
+                if Camera and Camera.CFrame then
+                    Camera.CFrame = CFrame.lookAt(Camera.CFrame.Position, target.Position)
+                end
+            end
+        end
+    end
+end)
+
+-- === Snap manual saat menembak ===
+UserInputService.InputBegan:Connect(function(input, gpe)
+    if gpe or not AimSnapEnabled then return end
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        local target = getClosestTarget(SnapRange)
+        if target and target.Parent then
+            if Camera and Camera.CFrame then
+                Camera.CFrame = CFrame.lookAt(Camera.CFrame.Position, target.Position)
+            end
+        end
+    end
+end)
+
+-- ⚡ Enemy ESP Like Infinite Yield (Auto Team Color)
+local EnemyESPEnabled = false
+local ESPCache = {}
+
+GunTab:Toggle({
+    Title = GradientText("Smart ESP", galaxyGradient),
+    Description = "ESP mirip Infinite Yield (warna otomatis: merah=musuh, biru=teman)",
+    Default = false,
+    Callback = function(state)
+        EnemyESPEnabled = state
+        if not state then
+            for _, v in pairs(ESPCache) do
+                v.Box.Visible = false
+                v.Label.Visible = false
+            end
+        end
+    end,
+})
+
+local function createESP(player)
+    local box = Drawing.new("Square")
+    box.Thickness = 1.5
+    box.Filled = false
+    box.Visible = false
+
+    local nameLabel = Drawing.new("Text")
+    nameLabel.Size = 14
+    nameLabel.Center = true
+    nameLabel.Outline = true
+    nameLabel.Visible = false
+
+    ESPCache[player] = {Box = box, Label = nameLabel}
+end
+
+local function removeESP(player)
+    if ESPCache[player] then
+        for _, obj in pairs(ESPCache[player]) do
+            obj:Remove()
+        end
+        ESPCache[player] = nil
+    end
+end
+
+Players.PlayerRemoving:Connect(removeESP)
+
+RunService.RenderStepped:Connect(function()
+    if not EnemyESPEnabled then return end
+
+    for _, player in ipairs(Players:GetPlayers()) do
+        if player ~= LocalPlayer then
+            if not ESPCache[player] then
+                createESP(player)
+            end
+
+            local data = ESPCache[player]
+            local char = player.Character
+            local hrp = char and char:FindFirstChild("HumanoidRootPart")
+            local head = char and char:FindFirstChild("Head")
+            local hum = char and char:FindFirstChildOfClass("Humanoid")
+
+            if char and hrp and hum and hum.Health > 0 then
+                local pos, onScreen = Camera:WorldToViewportPoint(hrp.Position)
+                if onScreen then
+                    local headPos = Camera:WorldToViewportPoint(head.Position + Vector3.new(0, 0.5, 0))
+                    local sizeY = math.abs(headPos.Y - pos.Y)
+                    local boxSize = Vector2.new(sizeY / 1.5, sizeY)
+                    local boxPos = Vector2.new(pos.X - boxSize.X / 2, pos.Y - boxSize.Y / 2)
+
+                    data.Box.Position = boxPos
+                    data.Box.Size = boxSize
+                    data.Box.Visible = true
+                    data.Label.Visible = true
+
+                    local color
+                    if player.Team and LocalPlayer.Team then
+                        if player.Team == LocalPlayer.Team then
+                            color = Color3.fromRGB(80, 170, 255)
+                        else
+                            color = Color3.fromRGB(255, 70, 70)
+                        end
+                    else
+                        color = Color3.fromRGB(255, 70, 70)
+                    end
+
+                    data.Box.Color = color
+                    data.Label.Color = color
+                    data.Label.Text = string.format("%s [%.0f]", player.DisplayName, (hrp.Position - Camera.CFrame.Position).Magnitude)
+                    data.Label.Position = Vector2.new(pos.X, boxPos.Y - 12)
+                else
+                    data.Box.Visible = false
+                    data.Label.Visible = false
+                end
+            else
+                data.Box.Visible = false
+                data.Label.Visible = false
+            end
+        end
+    end
+end)
+
+
+-- ⚡ AUTO TARGET TELEPORT (Smart Orbit Dash - Full Version)
+local TeleportEnemyEnabled = false
+local TeleportInterval = 0.8
+local TeleportSpeed = 0.3
+local TweenService = game:GetService("TweenService")
+
+GunTab:Toggle({
+    Title = GradientText("Teleport Musuh", galaxyGradient),
+    Description = "Auto ganti target, stay di udara, jarak jauh langsung nyusul",
+    Default = false,
+    Callback = function(state)
+        TeleportEnemyEnabled = state
+    end,
+})
+
+local currentTarget = nil
+
+local function hoverInAir()
+    local myHRP = getMyHRP()
+    if myHRP then
+        myHRP.Velocity = Vector3.zero
+        myHRP.CFrame = myHRP.CFrame + Vector3.new(0, 0.05, 0)
+    end
+end
+
+local function teleportAndOrbit(target)
+    local myHRP = getMyHRP()
+    if not (myHRP and target) then return end
+    if not target.Parent then return end
+
+    local targetPos = target.Position
+    local orbitRadius = 5
+    local angle = math.rad(math.random(0, 360))
+    local offset = Vector3.new(math.cos(angle) * orbitRadius, 4, math.sin(angle) * orbitRadius)
+    local finalPos = targetPos + offset + Vector3.new(0, 4, 0)
+
+    local distance = (myHRP.Position - targetPos).Magnitude
+
+    -- Langsung teleport kalau terlalu jauh
+    if distance > 200 then
+        myHRP.CFrame = CFrame.new(targetPos + Vector3.new(0, 30, 0))
+    end
+
+    -- Tween halus mendekati orbit
+    local tweenInfo = TweenInfo.new(TeleportSpeed, Enum.EasingStyle.Sine, Enum.EasingDirection.Out)
+    local tween = TweenService:Create(myHRP, tweenInfo, {Position = finalPos})
+    tween:Play()
+
+    -- Hadap ke target
+    task.delay(TeleportSpeed / 1.2, function()
+        if myHRP and target and target.Parent then
+            myHRP.CFrame = CFrame.lookAt(myHRP.Position, target.Position)
+        end
+    end)
+end
+
+task.spawn(function()
+    while true do
+        task.wait(TeleportInterval)
+
+        if not TeleportEnemyEnabled then
+            currentTarget = nil
+        else
+            -- cek target lama masih valid?
+            if not currentTarget or not currentTarget.Parent or (currentTarget.Parent:FindFirstChildOfClass("Humanoid") and currentTarget.Parent:FindFirstChildOfClass("Humanoid").Health <= 0) then
+                currentTarget = getClosestTarget(999999) -- cari baru otomatis
+            end
+
+            if currentTarget then
+                teleportAndOrbit(currentTarget)
+            else
+                hoverInAir()
+            end
+        end
+    end
+end)
+
+-- 🌀 MORPHING TAB
+local Players = game:GetService("Players")
+local LocalPlayer = Players.LocalPlayer
+
+local MorphingTab = Window:Tab({
+    Title = GradientText("Morphing", galaxyGradient),
+    Icon = "user",
+})
+
+-- ⚠️ DISCLAIMER (pakai button agar pasti muncul di semua versi WindUI)
+MorphingTab:Button({
+    Title = GradientText("DISCLAIMER", galaxyGradient),
+    Desc = "Awas! Jika fitur ini dipakai, untuk balik ke karakter asli harus REJOIN!! Jadi pikir baik-baik sebelum menggunakannya!",
+    Callback = function()
+        warn("Baca peringatannya dulu sebelum morph!")
+    end,
+})
+
+-- 🧍 Player List Dropdown
+local playerNames = {}
+local function UpdatePlayerList()
+    playerNames = {}
+    for _, plr in ipairs(Players:GetPlayers()) do
+        table.insert(playerNames, plr.Name)
+    end
+end
+UpdatePlayerList()
+
+local SelectedPlayer = nil
+local PlayerDropdown = MorphingTab:Dropdown({
+    Title = GradientText("List Player", galaxyGradient),
+    Desc = "List player",
+    Values = playerNames,
+    Default = playerNames[1] or "No players",
+    Multi = false,
+    Callback = function(selected)
+        SelectedPlayer = selected
+        print("Selected player:", selected)
+    end,
+})
+
+-- Auto-refresh saat player join/leave
+Players.PlayerAdded:Connect(function()
+    UpdatePlayerList()
+    if PlayerDropdown and typeof(PlayerDropdown.SetValues) == "function" then
+        PlayerDropdown:SetValues(playerNames)
+    end
+end)
+Players.PlayerRemoving:Connect(function()
+    UpdatePlayerList()
+    if PlayerDropdown and typeof(PlayerDropdown.SetValues) == "function" then
+        PlayerDropdown:SetValues(playerNames)
+    end
+end)
+
+-- 🔁 Manual Refresh
+MorphingTab:Button({
+    Title = GradientText("Refresh Player", galaxyGradient),
+    Desc = "Perbarui daftar player",
+    Callback = function()
+        UpdatePlayerList()
+        if PlayerDropdown and typeof(PlayerDropdown.SetValues) == "function" then
+            PlayerDropdown:SetValues(playerNames)
+        end
+        print("Player list refreshed!")
+    end,
+})
+
+-- 🧬 MORPH BUTTON (1:1 Animate)
+local morphing = false
+
+MorphingTab:Button({
+    Title = GradientText("Start Morph", galaxyGradient),
+    Desc = "Ganti karakter",
+    Callback = function()
+        if morphing then
+            warn("⚠️ Morph sedang berjalan, tunggu sebentar...")
+            return
+        end
+        morphing = true
+
+        task.defer(function()
+            task.wait(1)
+            morphing = false
+        end)
+
+        if not SelectedPlayer then
+            warn("⚠️ Pilih player dulu dari dropdown!")
+            return
+        end
+
+        local target = Players:FindFirstChild(SelectedPlayer)
+        if not target or not target.Character then
+            warn("⚠️ Target tidak ditemukan atau belum spawn.")
+            return
+        end
+        if target == LocalPlayer then
+            warn("⚠️ Tidak bisa morph ke diri sendiri.")
+            return
+        end
+
+        local oldChar = LocalPlayer.Character
+        local oldPos = (oldChar and oldChar:FindFirstChild("HumanoidRootPart"))
+            and oldChar.HumanoidRootPart.CFrame
+            or CFrame.new(0, 10, 0)
+
+        -- 🔹 Hapus karakter lama dulu
+        if oldChar and oldChar.Parent then
+            pcall(function() oldChar:Destroy() end)
+            task.wait(0.2)
+        end
+
+        -- 🔹 Buat karakter baru dari target
+        local desc = Players:GetHumanoidDescriptionFromUserId(target.UserId)
+        local newChar = Players:CreateHumanoidModelFromDescription(desc, Enum.HumanoidRigType.R15)
+        newChar.Name = LocalPlayer.Name
+        newChar.Parent = workspace
+
+        local newHum = newChar:WaitForChild("Humanoid")
+        local newRoot = newChar:WaitForChild("HumanoidRootPart")
+        newRoot.CFrame = oldPos + Vector3.new(0, 2, 0)
+
+        -- 🔹 Ganti karakter player lokal
+        LocalPlayer.Character = newChar
+        workspace.CurrentCamera.CameraSubject = newHum
+
+        -- 🔹 Clone Animate dari target
+        local function cloneAnimate(src, dest)
+            local animate = src:FindFirstChild("Animate")
+            if not animate then return false end
+            local clone = animate:Clone()
+            clone.Parent = dest
+            return true
+        end
+
+        local ok = cloneAnimate(target.Character, newChar)
+        if not ok then
+            -- fallback animasi default
+            local animate = Instance.new("LocalScript")
+            animate.Name = "Animate"
+            animate.Source = [[
+                local h = script.Parent:WaitForChild("Humanoid")
+                local function loadAnim(name, id)
+                    local a = Instance.new("Animation")
+                    a.Name = name
+                    a.AnimationId = id
+                    return h:LoadAnimation(a)
+                end
+                local idle = loadAnim("Idle", "rbxassetid://507766388")
+                local walk = loadAnim("Walk", "rbxassetid://507777826")
+                local run  = loadAnim("Run",  "rbxassetid://507767714")
+                local jump = loadAnim("Jump", "rbxassetid://507765000")
+                local fall = loadAnim("Fall", "rbxassetid://507767968")
+
+                h.Running:Connect(function(speed)
+                    if speed > 1 then
+                        idle:Stop(); walk:Play()
+                    else
+                        walk:Stop(); idle:Play()
+                    end
+                end)
+                h.Jumping:Connect(function()
+                    walk:Stop(); idle:Stop(); jump:Play()
+                end)
+                h.FreeFalling:Connect(function()
+                    fall:Play()
+                end)
+                h.StateChanged:Connect(function(_, new)
+                    if new == Enum.HumanoidStateType.Landed then
+                        fall:Stop(); idle:Play()
+                    end
+                end)
+                idle:Play()
+            ]]
+            animate.Parent = newChar
+        end
+
+        -- 🔹 Pastikan humanoid aktif & bisa dikontrol
+        task.wait(0.1)
+        newHum.PlatformStand = false
+        newHum.WalkSpeed = 16
+        newHum.JumpPower = 50
+        newHum:ChangeState(Enum.HumanoidStateType.GettingUp)
+
+        print("✅ Morph sukses! Sekarang kamu menjadi:", target.Name)
+    end
+})
+
+-- 🌍 Tab
+local AutoWalkTab = Window:Tab({
+    Title = GradientText("Yahayuk Normal", galaxyGradient),
+    Icon = "route",
+})
+
+-- ⚠️ DISCLAIMER (pakai button agar pasti muncul di semua versi WindUI)
+AutoWalkTab:Button({
+    Title = GradientText("INFORMASI", galaxyGradient),
+    Desc = "Di mode VIP, AutoWalk bakal terus update gunung menyesuaikan gunung yang sedang ramai SAAT INI.",
+})
+
+local Path = {
+    -- Checkpoint 1
+    {pos = Vector3.new(-877,172,851), jump=false},
+    {pos = Vector3.new(-877,171,851), jump=false},
+    {pos = Vector3.new(-872,168,851), jump=false},
+    {pos = Vector3.new(-865,173,859), jump=true},
+    {pos = Vector3.new(-855,173,859), jump=true},
+    {pos = Vector3.new(-846,173,859), jump=true},
+    {pos = Vector3.new(-837,173,859), jump=true},
+    {pos = Vector3.new(-828,173,859), jump=true},
+    {pos = Vector3.new(-820,173,859), jump=true},
+    {pos = Vector3.new(-810,173,859), jump=true},
+    {pos = Vector3.new(-801,173,859), jump=true},
+    {pos = Vector3.new(-792,173,859), jump=true},
+    {pos = Vector3.new(-783,173,851), jump=true},
+    {pos = Vector3.new(-773,174,858), jump=true},
+    {pos = Vector3.new(-763,173,851), jump=true},
+    {pos = Vector3.new(-750,174,858), jump=true},
+    {pos = Vector3.new(-743,173,851), jump=true},
+    {pos = Vector3.new(-735,176,854), jump=true},
+    {pos = Vector3.new(-728,180,847), jump=true},
+    {pos = Vector3.new(-718,185,846), jump=true},
+    {pos = Vector3.new(-709,187,844), jump=true},
+    {pos = Vector3.new(-697,187,840), jump=false},
+    {pos = Vector3.new(-687,191,836), jump=true},
+    {pos = Vector3.new(-679,197,832), jump=true},
+    {pos = Vector3.new(-672,204,840), jump=true},
+    {pos = Vector3.new(-666,210,835), jump=true},
+    {pos = Vector3.new(-658,215,840), jump=true},
+    {pos = Vector3.new(-650,221,834), jump=true},
+    {pos = Vector3.new(-650,221,824), jump=true},
+    {pos = Vector3.new(-650,221,812), jump=true},
+    {pos = Vector3.new(-651,221,800), jump=true},
+    {pos = Vector3.new(-651,221,791), jump=true},
+    {pos = Vector3.new(-651,221,781), jump=true},
+    {pos = Vector3.new(-650,221,772), jump=true},
+    {pos = Vector3.new(-641,221,766), jump=true},
+    {pos = Vector3.new(-629,221,767), jump=true},
+    {pos = Vector3.new(-618,221,768), jump=true},
+    {pos = Vector3.new(-606,221,768), jump=true},
+    {pos = Vector3.new(-596,221,768), jump=true},
+    {pos = Vector3.new(-585,221,768), jump=true},
+    {pos = Vector3.new(-573,221,768), jump=true},
+    {pos = Vector3.new(-562,221,767), jump=true},
+    {pos = Vector3.new(-550,221,767), jump=true},
+    {pos = Vector3.new(-539,221,767), jump=true},
+    {pos = Vector3.new(-530,229,766), jump=true},
+    {pos = Vector3.new(-522,235,761), jump=true},
+    {pos = Vector3.new(-515,242,766), jump=true},
+    {pos = Vector3.new(-507,248,761), jump=true},
+    {pos = Vector3.new(-500,253,766), jump=true},
+    {pos = Vector3.new(-487,250,768), jump=true},
+    {pos = Vector3.new(-476,251,768), jump=true},
+    {pos = Vector3.new(-465,251,769), jump=true},
+    {pos = Vector3.new(-455,251,772), jump=true},
+    {pos = Vector3.new(-444,251,775), jump=true},
+    {pos = Vector3.new(-432,251,779), jump=true},
+    {pos = Vector3.new(-425,251,785), jump=true},
+    {pos = Vector3.new(-418,251,787), jump=true},
+
+    -- Checkpoint 2
+    {pos = Vector3.new(-420,251,776), jump=true},
+    {pos = Vector3.new(-423,251,766), jump=true},
+    {pos = Vector3.new(-426,251,755), jump=true},
+    {pos = Vector3.new(-430,251,744), jump=true},
+    {pos = Vector3.new(-434,251,733), jump=true},
+    {pos = Vector3.new(-438,251,722), jump=true},
+    {pos = Vector3.new(-440,250,714), jump=true},
+    {pos = Vector3.new(-442,253,703), jump=true},
+    {pos = Vector3.new(-437,257,694), jump=true},
+    {pos = Vector3.new(-426,263,693), jump=true},
+    {pos = Vector3.new(-417,274,687), jump=true},
+    {pos = Vector3.new(-408,274,685), jump=true},
+    {pos = Vector3.new(-402,285,686), jump=true},
+    {pos = Vector3.new(-391,286,686), jump=true},
+    {pos = Vector3.new(-377,282,685), jump=true},
+    {pos = Vector3.new(-368,286,684), jump=false},
+    {pos = Vector3.new(-358,291,683), jump=true},
+    {pos = Vector3.new(-347,299,682), jump=true},
+    {pos = Vector3.new(-334,305,683), jump=true},
+    {pos = Vector3.new(-324,305,675), jump=false},
+    {pos = Vector3.new(-324,313,664), jump=true},
+    {pos = Vector3.new(-319,323,651), jump=true},
+    {pos = Vector3.new(-309,325,643), jump=true},
+    {pos = Vector3.new(-304,332,635), jump=true},
+    {pos = Vector3.new(-304,337,635), jump=false},
+    {pos = Vector3.new(-309,350,629), jump=true},
+    {pos = Vector3.new(-319,359,629), jump=true},
+    {pos = Vector3.new(-324,361,622), jump=true},
+    {pos = Vector3.new(-334,373,616), jump=true},
+    {pos = Vector3.new(-344,378,605), jump=true},
+    {pos = Vector3.new(-340,386,595), jump=true},
+    {pos = Vector3.new(-338,390,586), jump=true},
+    {pos = Vector3.new(-335,390,573), jump=true},
+    {pos = Vector3.new(-334,390,565), jump=true},
+    {pos = Vector3.new(-333,390,554), jump=true},
+    {pos = Vector3.new(-332,390,544), jump=true},
+    {pos = Vector3.new(-330,390,535), jump=true},
+    {pos = Vector3.new(-327,390,525), jump=true},
+
+    -- Checkpoint 3
+    {pos = Vector3.new(-325,390,543), jump=false},
+    {pos = Vector3.new(-316,390,550), jump=true},
+    {pos = Vector3.new(-311,389,557), jump=true},
+    {pos = Vector3.new(-299,391,557), jump=true},
+    {pos = Vector3.new(-287,390,557), jump=true},
+    {pos = Vector3.new(-271,396,559), jump=true},
+    {pos = Vector3.new(-256,394,561), jump=true},
+    {pos = Vector3.new(-241,400,563), jump=true},
+    {pos = Vector3.new(-226,399,560), jump=true},
+    {pos = Vector3.new(-219,400,560), jump=false},
+    {pos = Vector3.new(-208,400,564), jump=true},
+    {pos = Vector3.new(-198,401,558), jump=true},
+    {pos = Vector3.new(-189,401,559), jump=false},
+    {pos = Vector3.new(-180,401,568), jump=true},
+    {pos = Vector3.new(-174,401,570), jump=false},
+    {pos = Vector3.new(-166,402,577), jump=true},
+    {pos = Vector3.new(-153,409,572), jump=true},
+    {pos = Vector3.new(-145,402,562), jump=true},
+    {pos = Vector3.new(-131,396,564), jump=true},
+    {pos = Vector3.new(-119,392,563), jump=true},
+    {pos = Vector3.new(-109,403,562), jump=true},
+    {pos = Vector3.new(-100,407,560), jump=true},
+    {pos = Vector3.new(-89,408,560), jump=true},
+    {pos = Vector3.new(-78,410,561), jump=true},
+    {pos = Vector3.new(-67,403,560), jump=true},
+    {pos = Vector3.new(-55,407,559), jump=true},
+    {pos = Vector3.new(-45,411,559), jump=true},
+    {pos = Vector3.new(-36,417,560), jump=true},
+    {pos = Vector3.new(-26,416,559), jump=true},
+    {pos = Vector3.new(-16,419,557), jump=true},
+    {pos = Vector3.new(-5,421,559), jump=true},
+    {pos = Vector3.new(7,419,560), jump=true},
+    {pos = Vector3.new(14,418,559), jump=false},
+    {pos = Vector3.new(27,420,559), jump=true},
+    {pos = Vector3.new(43,420,559), jump=true},
+    {pos = Vector3.new(55,422,559), jump=true},
+    {pos = Vector3.new(69,415,562), jump=true},
+    {pos = Vector3.new(82,415,558), jump=true},
+    {pos = Vector3.new(94,413,558), jump=true},
+    {pos = Vector3.new(108,412,555), jump=true},
+    {pos = Vector3.new(120,415,554), jump=true},
+    {pos = Vector3.new(132,415,552), jump=true},
+    {pos = Vector3.new(145,419,550), jump=true},
+    {pos = Vector3.new(159,415,549), jump=true},
+    {pos = Vector3.new(170,421,548), jump=true},
+    {pos = Vector3.new(182,428,546), jump=true},
+    {pos = Vector3.new(193,430,543), jump=true},
+    {pos = Vector3.new(205,429,540), jump=true},
+    {pos = Vector3.new(216,432,537), jump=true},
+    {pos = Vector3.new(228,434,533), jump=true},
+    {pos = Vector3.new(239,432,526), jump=true},
+    {pos = Vector3.new(250,432,521), jump=true},
+    {pos = Vector3.new(262,431,516), jump=true},
+    {pos = Vector3.new(289,431,500), jump=false},
+    {pos = Vector3.new(294,431,494), jump=false},
+
+    -- Checkpoint 4
+    {pos = Vector3.new(303,432,500), jump=false},
+    {pos = Vector3.new(308,434,495), jump=false},
+    {pos = Vector3.new(315,433,492), jump=false},
+    {pos = Vector3.new(327,435,495), jump=true},
+    {pos = Vector3.new(341,436,495), jump=true},
+    {pos = Vector3.new(351,439,491), jump=true},
+    {pos = Vector3.new(352,439,476), jump=true},
+    {pos = Vector3.new(361,442,471), jump=true},
+    {pos = Vector3.new(373,445,477), jump=true},
+    {pos = Vector3.new(381,448,487), jump=true},
+    {pos = Vector3.new(394,453,488), jump=true},
+    {pos = Vector3.new(402,457,484), jump=true},
+    {pos = Vector3.new(402,463,478), jump=true},
+    {pos = Vector3.new(401,465,470), jump=true},
+    {pos = Vector3.new(400,468,462), jump=true},
+    {pos = Vector3.new(399,458,449), jump=true},
+    {pos = Vector3.new(404,462,441), jump=true},
+    {pos = Vector3.new(402,472,433), jump=true},
+    {pos = Vector3.new(402,479,423), jump=true},
+    {pos = Vector3.new(394,478,414), jump=true},
+    {pos = Vector3.new(382,473,407), jump=true},
+    {pos = Vector3.new(375,476,397), jump=true},
+    {pos = Vector3.new(369,477,385), jump=true},
+    {pos = Vector3.new(364,482,376), jump=true},
+    {pos = Vector3.new(355,486,369), jump=true},
+    {pos = Vector3.new(346,490,364), jump=true},
+    {pos = Vector3.new(336,492,364), jump=true},
+    {pos = Vector3.new(321,492,343), jump=false},
+
+    -- Checkpoint 5
+    {pos = Vector3.new(334,492,341), jump=false},
+    {pos = Vector3.new(336,485,329), jump=true},
+    {pos = Vector3.new(344,467,317), jump=true},
+    {pos = Vector3.new(344,470,307), jump=true},
+    {pos = Vector3.new(345,468,293), jump=true},
+    {pos = Vector3.new(348,470,281), jump=true},
+    {pos = Vector3.new(340,468,269), jump=true},
+    {pos = Vector3.new(333,474,258), jump=true},
+    {pos = Vector3.new(322,468,253), jump=true},
+    {pos = Vector3.new(316,462,243), jump=true},
+    {pos = Vector3.new(294,437,247), jump=true},
+    {pos = Vector3.new(282,430,261), jump=true},
+    {pos = Vector3.new(273,429,273), jump=true},
+    {pos = Vector3.new(263,431,283), jump=true},
+    {pos = Vector3.new(249,420,291), jump=true},
+    {pos = Vector3.new(238,422,288), jump=true},
+    {pos = Vector3.new(228,419,289), jump=true},
+    {pos = Vector3.new(215,409,286), jump=true},
+    {pos = Vector3.new(205,400,280), jump=true},
+    {pos = Vector3.new(196,392,275), jump=true},
+    {pos = Vector3.new(187,384,285), jump=true},
+    {pos = Vector3.new(172,378,287), jump=true},
+    {pos = Vector3.new(163,371,286), jump=true},
+    {pos = Vector3.new(151,371,295), jump=true},
+    {pos = Vector3.new(138,371,287), jump=true},
+    {pos = Vector3.new(138,371,275), jump=true},
+    {pos = Vector3.new(130,360,264), jump=true},
+    {pos = Vector3.new(128,349,254), jump=true},
+    {pos = Vector3.new(123,339,244), jump=true},
+    {pos = Vector3.new(121,326,231), jump=true},
+    {pos = Vector3.new(111,320,222), jump=true},
+    {pos = Vector3.new(103,320,225), jump=true},
+    {pos = Vector3.new(95,323,223), jump=true},
+    {pos = Vector3.new(92,319,211), jump=true},
+    {pos = Vector3.new(85,306,201), jump=true},
+    {pos = Vector3.new(81,294,190), jump=true},
+    {pos = Vector3.new(73,288,180), jump=true},
+    {pos = Vector3.new(70,283,167), jump=true},
+    {pos = Vector3.new(64,275,156), jump=true},
+    {pos = Vector3.new(56,259,144), jump=true},
+    {pos = Vector3.new(54,249,128), jump=true},
+    {pos = Vector3.new(44,249,119), jump=true},
+    {pos = Vector3.new(33,249,110), jump=true},
+    {pos = Vector3.new(24,247,101), jump=true},
+    {pos = Vector3.new(24,248,90), jump=true},
+    {pos = Vector3.new(29,248,81), jump=true},
+    {pos = Vector3.new(37,257,74), jump=true},
+    {pos = Vector3.new(42,264,70), jump=true},
+    {pos = Vector3.new(52,266,65), jump=true},
+    {pos = Vector3.new(60,268,58), jump=true},
+    {pos = Vector3.new(63,271,45), jump=true},
+    {pos = Vector3.new(64,271,37), jump=false},
+    {pos = Vector3.new(66,274,25), jump=true},
+    {pos = Vector3.new(63,277,18), jump=false},
+    {pos = Vector3.new(54,284,11), jump=true},
+    {pos = Vector3.new(51,281,-3), jump=true},
+    {pos = Vector3.new(45,283,-10), jump=true},
+    {pos = Vector3.new(43,282,-23), jump=true},
+    {pos = Vector3.new(49,282,-34), jump=true},
+    {pos = Vector3.new(57,281,-41), jump=false},
+    {pos = Vector3.new(69,281,-49), jump=true},
+    {pos = Vector3.new(73,288,-58), jump=true},
+    {pos = Vector3.new(69,286,-65), jump=true},
+    {pos = Vector3.new(62,291,-73), jump=true},
+    {pos = Vector3.new(64,296,-83), jump=true},
+    {pos = Vector3.new(70,296,-93), jump=true},
+    {pos = Vector3.new(75,296,-101), jump=true},
+    {pos = Vector3.new(84,290,-114), jump=true},
+    {pos = Vector3.new(100,275,-114), jump=true},
+    {pos = Vector3.new(105,280,-116), jump=false},
+    {pos = Vector3.new(122,260,-124), jump=true},
+    {pos = Vector3.new(125,257,-136), jump=true},
+    {pos = Vector3.new(137,262,-140), jump=true},
+    {pos = Vector3.new(148,265,-141), jump=true},
+    {pos = Vector3.new(160,264,-143), jump=true},
+    {pos = Vector3.new(175,257,-142), jump=true},
+    {pos = Vector3.new(187,251,-136), jump=true},
+    {pos = Vector3.new(199,249,-131), jump=true},
+    {pos = Vector3.new(211,247,-123), jump=true},
+    {pos = Vector3.new(222,253,-118), jump=true},
+    {pos = Vector3.new(222,278,-118), jump=false},
+    {pos = Vector3.new(228,283,-119), jump=false},
+    {pos = Vector3.new(239,281,-124), jump=true},
+    {pos = Vector3.new(251,281,-128), jump=true},
+    {pos = Vector3.new(256,279,-130), jump=false},
+    {pos = Vector3.new(255,282,-131), jump=false},
+    {pos = Vector3.new(255,305,-131), jump=false},
+    {pos = Vector3.new(255,311,-138), jump=false},
+    {pos = Vector3.new(254,316,-146), jump=false},
+    {pos = Vector3.new(242,316,-151), jump=true},
+    {pos = Vector3.new(231,316,-146), jump=true},
+
+    -- Menuju Puncak
+    {pos = Vector3.new(222,316,-154), jump=true},
+    {pos = Vector3.new(215,315,-164), jump=true},
+    {pos = Vector3.new(207,316,-173), jump=true},
+    {pos = Vector3.new(200,316,-182), jump=true},
+    {pos = Vector3.new(197,316,-193), jump=true},
+    {pos = Vector3.new(198,316,-204), jump=true},
+    {pos = Vector3.new(189,316,-209), jump=true},
+    {pos = Vector3.new(176,316,-210), jump=false},
+    {pos = Vector3.new(173,314,-210), jump=false},
+    {pos = Vector3.new(160,319,-209), jump=true},
+    {pos = Vector3.new(148,317,-208), jump=true},
+    {pos = Vector3.new(136,316,-207), jump=true},
+    {pos = Vector3.new(123,319,-205), jump=true},
+    {pos = Vector3.new(111,322,-203), jump=true},
+    {pos = Vector3.new(102,325,-205), jump=true},
+    {pos = Vector3.new(89,321,-203), jump=true},
+    {pos = Vector3.new(77,330,-203), jump=true},
+    {pos = Vector3.new(73,333,-203), jump=false},
+    {pos = Vector3.new(64,343,-205), jump=true},
+    {pos = Vector3.new(61,346,-205), jump=false},
+    {pos = Vector3.new(51,349,-200), jump=true},
+    {pos = Vector3.new(39,348,-199), jump=true},
+    {pos = Vector3.new(26,350,-197), jump=true},
+    {pos = Vector3.new(14,353,-199), jump=true},
+    {pos = Vector3.new(1,357,-193), jump=true},
+    {pos = Vector3.new(-11,362,-198), jump=true},
+    {pos = Vector3.new(-18,362,-196), jump=false},
+    {pos = Vector3.new(-25,368,-192), jump=true},
+    {pos = Vector3.new(-29,373,-190), jump=false},
+    {pos = Vector3.new(-37,386,-187), jump=true},
+    {pos = Vector3.new(-46,391,-189), jump=true},
+    {pos = Vector3.new(-54,393,-197), jump=true},
+    {pos = Vector3.new(-66,401,-194), jump=true},
+    {pos = Vector3.new(-67,409,-189), jump=true},
+    {pos = Vector3.new(-75,417,-187), jump=true},
+    {pos = Vector3.new(-75,422,-191), jump=true},
+    {pos = Vector3.new(-82,430,-187), jump=true},
+    {pos = Vector3.new(-92,435,-190), jump=true},
+    {pos = Vector3.new(-104,443,-195), jump=true},
+    {pos = Vector3.new(-113,448,-189), jump=true},
+    {pos = Vector3.new(-125,448,-187), jump=true},
+    {pos = Vector3.new(-138,448,-187), jump=true},
+    {pos = Vector3.new(-149,456,-181), jump=true},
+    {pos = Vector3.new(-160,463,-185), jump=true},
+    {pos = Vector3.new(-168,472,-191), jump=true},
+    {pos = Vector3.new(-174,480,-185), jump=true},
+    {pos = Vector3.new(-180,487,-192), jump=true},
+    {pos = Vector3.new(-179,499,-188), jump=true},
+    {pos = Vector3.new(-177,506,-194), jump=true},
+    {pos = Vector3.new(-188,514,-200), jump=true},
+    {pos = Vector3.new(-202,511,-202), jump=true},
+    {pos = Vector3.new(-212,522,-208), jump=true},
+    {pos = Vector3.new(-213,526,-217), jump=true},
+    {pos = Vector3.new(-221,532,-223), jump=true},
+    {pos = Vector3.new(-210,538,-225), jump=true},
+    {pos = Vector3.new(-219,547,-229), jump=true},
+    {pos = Vector3.new(-225,547,-229), jump=false},
+    {pos = Vector3.new(-233,546,-235), jump=false},
+    {pos = Vector3.new(-242,545,-243), jump=false},
+    {pos = Vector3.new(-251,546,-250), jump=false},
+    {pos = Vector3.new(-256,549,-255), jump=false},
+    {pos = Vector3.new(-261,549,-260), jump=false},
+    {pos = Vector3.new(-260,557,-264), jump=true},
+    {pos = Vector3.new(-268,560,-259), jump=true},
+    {pos = Vector3.new(-277,566,-265), jump=true},
+    {pos = Vector3.new(-285,574,-271), jump=true},
+    {pos = Vector3.new(-294,580,-277), jump=true},
+    {pos = Vector3.new(-301,590,-283), jump=true},
+    {pos = Vector3.new(-308,597,-287), jump=true},
+    {pos = Vector3.new(-315,608,-292), jump=true},
+    {pos = Vector3.new(-321,618,-296), jump=true},
+    {pos = Vector3.new(-326,628,-301), jump=true},
+    {pos = Vector3.new(-337,634,-304), jump=true},
+    {pos = Vector3.new(-345,638,-309), jump=true},
+    {pos = Vector3.new(-352,645,-319), jump=true},
+    {pos = Vector3.new(-357,645,-319), jump=false},
+    {pos = Vector3.new(-365,646,-320), jump=true},
+    {pos = Vector3.new(-372,646,-326), jump=false},
+    {pos = Vector3.new(-377,652,-331), jump=true},
+    {pos = Vector3.new(-382,653,-335), jump=false},
+    {pos = Vector3.new(-392,654,-336), jump=true},
+    {pos = Vector3.new(-399,654,-340), jump=false},
+    {pos = Vector3.new(-409,660,-345), jump=true},
+    {pos = Vector3.new(-415,662,-352), jump=true},
+    {pos = Vector3.new(-425,662,-355), jump=true},
+    {pos = Vector3.new(-433,665,-361), jump=true},
+    {pos = Vector3.new(-438,667,-369), jump=true},
+    {pos = Vector3.new(-448,669,-370), jump=true},
+    {pos = Vector3.new(-456,670,-375), jump=true},
+    {pos = Vector3.new(-464,674,-380), jump=true},
+    {pos = Vector3.new(-470,680,-387), jump=true},
+    {pos = Vector3.new(-476,680,-398), jump=true},
+    {pos = Vector3.new(-479,681,-411), jump=true},
+    {pos = Vector3.new(-478,681,-422), jump=true},
+    {pos = Vector3.new(-477,680,-434), jump=true},
+    {pos = Vector3.new(-475,680,-445), jump=true},
+    {pos = Vector3.new(-474,681,-456), jump=true},
+    {pos = Vector3.new(-473,682,-467), jump=true},
+    {pos = Vector3.new(-471,684,-479), jump=true},
+    {pos = Vector3.new(-470,689,-488), jump=true},
+    {pos = Vector3.new(-464,694,-494), jump=true},
+    {pos = Vector3.new(-465,708,-497), jump=true},
+    {pos = Vector3.new(-468,716,-505), jump=true},
+    {pos = Vector3.new(-470,726,-514), jump=true},
+    {pos = Vector3.new(-470,735,-522), jump=true},
+    {pos = Vector3.new(-472,743,-531), jump=true},
+    {pos = Vector3.new(-474,761,-538), jump=true},
+    {pos = Vector3.new(-475,770,-547), jump=true},
+    {pos = Vector3.new(-478,780,-554), jump=true},
+    {pos = Vector3.new(-486,793,-560), jump=true},
+    {pos = Vector3.new(-496,797,-566), jump=true},
+    {pos = Vector3.new(-506,804,-569), jump=true},
+    {pos = Vector3.new(-514,814,-574), jump=true},
+    {pos = Vector3.new(-523,823,-578), jump=true},
+    {pos = Vector3.new(-532,833,-582), jump=true},
+    {pos = Vector3.new(-541,841,-584), jump=true},
+    {pos = Vector3.new(-551,848,-585), jump=true},
+    {pos = Vector3.new(-561,859,-584), jump=true},
+    {pos = Vector3.new(-570,862,-584), jump=true},
+    {pos = Vector3.new(-580,865,-577), jump=true},
+    {pos = Vector3.new(-587,870,-573), jump=true},
+    {pos = Vector3.new(-596,878,-567), jump=true},
+    {pos = Vector3.new(-602,889,-561), jump=true},
+    {pos = Vector3.new(-608,902,-559), jump=true},
+    {pos = Vector3.new(-609,908,-550), jump=true},
+    {pos = Vector3.new(-611,908,-539), jump=true},
+    {pos = Vector3.new(-615,908,-527), jump=true},
+    {pos = Vector3.new(-618,908,-516), jump=true},
+    {pos = Vector3.new(-621,908,-504), jump=true},
+    {pos = Vector3.new(-622,916,-496), jump=true},
+}
+
+local Checkpoints = {
+    [1] = 1,      -- mulai dari index 1
+    [2] = 46,     -- Checkpoint 1 selesai
+    [3] = 79,     -- Checkpoint 2 selesai
+    [4] = 128,    -- Checkpoint 3 selesai
+    [5] = 149,    -- Checkpoint 4 selesai
+    [6] = 239,    -- Checkpoint 5 selesai
+    [7] = 381,    -- Checkpoint 6 / puncak selesai
+}
+
+-- ⚙️ Variabel
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local LocalPlayer = Players.LocalPlayer
+local root = LocalPlayer.Character:WaitForChild("HumanoidRootPart")
+
+local walkSpeed = 24
+local jumpHeight = 10
+local isReplaying = false
+local isPaused = false
+local currentIndex = 1
+local loopEnabled = false
+
+-- 🌀 Fungsi gerak smooth
+local function moveSmooth(endPos, isJump)
+    local startPos = root.Position
+    local distance = (startPos - endPos).Magnitude
+    local duration = distance / walkSpeed
+    local t = 0
+
+    while t < 1 and isReplaying do
+        if isPaused then
+            task.wait(0.05)
+        else
+            local dt = RunService.Heartbeat:Wait()
+            t += dt / duration
+            local pos = startPos:Lerp(endPos, math.clamp(t, 0, 1))
+            if isJump then
+                local arc = math.sin(math.pi * t) * jumpHeight
+                pos = Vector3.new(pos.X, pos.Y + arc, pos.Z)
+            end
+            root.CFrame = CFrame.new(pos)
+        end
+    end
+end
+
+local function startAutoWalk(fromIndex)
+    if isReplaying then return end
+    isReplaying = true
+    isPaused = false
+    currentIndex = fromIndex or 1
+
+    WindUI:Notify({
+        Title = GradientText("Auto Walk Dimulai", galaxyGradient),
+        Content = "Mulai dari checkpoint " .. tostring(fromIndex or 1),
+        Duration = 3
+    })
+
+    task.spawn(function()
+        while isReplaying do
+            for i = currentIndex, #Path - 1 do
+                if not isReplaying then break end
+                currentIndex = i
+                moveSmooth(Path[i + 1].pos, Path[i + 1].jump)
+            end
+
+            if loopEnabled and isReplaying then
+                WindUI:Notify({
+                    Title = "Loop Delay",
+                    Content = "Auto walk akan mulai lagi dalam 2 detik...",
+                    Duration = 2
+                })
+                task.wait(2) -- delay sebelum restart loop
+                currentIndex = 1
+            else
+                WindUI:Notify({
+                    Title = GradientText("Selesai", galaxyGradient),
+                    Content = "Sudah sampai titik akhir!",
+                    Duration = 3
+                })
+                isReplaying = false
+                currentIndex = 1
+            end
+        end
+    end)
+end
+
+-- 🔘 Tombol Dasar
+AutoWalkTab:Button({
+    Title = GradientText("Start / Resume", galaxyGradient),
+    Description = "Mulai atau lanjut dari posisi terakhir",
+    Callback = function()
+        if not isReplaying then
+            startAutoWalk(currentIndex)
+        elseif isPaused then
+            isPaused = false
+            WindUI:Notify({
+                Title = "✅ Dilanjutkan",
+                Content = "Auto walk dilanjutkan.",
+                Duration = 3
+            })
+        end
+    end
+})
+
+AutoWalkTab:Button({
+    Title = GradientText("Pause", galaxyGradient),
+    Description = "Jeda sementara auto walk",
+    Callback = function()
+        if isReplaying and not isPaused then
+            isPaused = true
+            WindUI:Notify({
+                Title = "Dijeda",
+                Content = "Auto walk dijeda sementara.",
+                Duration = 3
+            })
+        end
+    end
+})
+
+AutoWalkTab:Button({
+    Title = GradientText("Stop", galaxyGradient),
+    Description = "Hentikan dan reset ke awal",
+    Callback = function()
+        isReplaying = false
+        isPaused = false
+        currentIndex = 1
+        WindUI:Notify({
+            Title = "Dihentikan",
+            Content = "Auto walk direset ke awal.",
+            Duration = 3
+        })
+    end
+})
+
+-- 🔁 Toggle Loop
+AutoWalkTab:Toggle({
+    Title = GradientText("Loop Auto Walk", galaxyGradient),
+    Description = "Hidupkan / matikan loop di akhir path",
+    Default = false,
+    Callback = function(state)
+        loopEnabled = state
+        WindUI:Notify({
+            Title = "Loop " .. (state and "Aktif" or "Nonaktif"),
+            Content = "Auto walk akan " .. (state and "ulang saat sampai akhir" or "berhenti di akhir"),
+            Duration = 3
+        })
+    end
+})
+
+-- 🧭 Manual Checkpoint
+AutoWalkTab:Section({
+    Title = GradientText("Manual Checkpoint", galaxyGradient),
+    Description = "Mulai dari checkpoint tertentu"
+})
+
+for i = 1, #Checkpoints do
+    AutoWalkTab:Button({
+        Title = GradientText("Start dari Checkpoint " .. i, galaxyGradient),
+        Description = "Mulai dari titik " .. i,
+        Callback = function()
+            startAutoWalk(Checkpoints[i])
+        end
+    })
+end
+
+------------------------------------------------------------
+-- 🌍 TAB AUTO WALK
+------------------------------------------------------------
+local AutoWalkTab = Window:Tab({
+    Title = GradientText("Yahayuk SpeedRun", galaxyGradient),
+    Icon = "route",
+})
+
+AutoWalkTab:Button({
+    Title = GradientText("INFORMASI", galaxyGradient),
+    Desc = "Mode SpeedRun, lebih cepat",
+    Callback = function() warn("Baca!") end,
+})
+
+local Path = {
+    -- Checkpoint 1
+    {pos = Vector3.new(-877,172,851), jump=false},
+    {pos = Vector3.new(-877,171,851), jump=false},
+    {pos = Vector3.new(-872,168,851), jump=false},
+    {pos = Vector3.new(-865,173,859), jump=true},
+    {pos = Vector3.new(-855,173,859), jump=true},
+    {pos = Vector3.new(-846,173,859), jump=true},
+    {pos = Vector3.new(-837,173,859), jump=true},
+    {pos = Vector3.new(-828,173,859), jump=true},
+    {pos = Vector3.new(-820,173,859), jump=true},
+    {pos = Vector3.new(-810,173,859), jump=true},
+    {pos = Vector3.new(-801,173,859), jump=true},
+    {pos = Vector3.new(-792,173,859), jump=true},
+    {pos = Vector3.new(-783,173,851), jump=true},
+    {pos = Vector3.new(-773,174,858), jump=true},
+    {pos = Vector3.new(-763,173,851), jump=true},
+    {pos = Vector3.new(-750,174,858), jump=true},
+    {pos = Vector3.new(-743,173,851), jump=true},
+    {pos = Vector3.new(-735,176,854), jump=true},
+    {pos = Vector3.new(-728,180,847), jump=true},
+    {pos = Vector3.new(-718,185,846), jump=true},
+    {pos = Vector3.new(-709,187,844), jump=true},
+    {pos = Vector3.new(-697,187,840), jump=false},
+    {pos = Vector3.new(-687,191,836), jump=true},
+    {pos = Vector3.new(-679,197,832), jump=true},
+    {pos = Vector3.new(-672,204,840), jump=true},
+    {pos = Vector3.new(-666,210,835), jump=true},
+    {pos = Vector3.new(-658,215,840), jump=true},
+    {pos = Vector3.new(-650,221,834), jump=true},
+    {pos = Vector3.new(-650,221,824), jump=true},
+    {pos = Vector3.new(-650,221,812), jump=true},
+    {pos = Vector3.new(-651,221,800), jump=true},
+    {pos = Vector3.new(-651,221,791), jump=true},
+    {pos = Vector3.new(-651,221,781), jump=true},
+    {pos = Vector3.new(-650,221,772), jump=true},
+    {pos = Vector3.new(-641,221,766), jump=true},
+    {pos = Vector3.new(-629,221,767), jump=true},
+    {pos = Vector3.new(-618,221,768), jump=true},
+    {pos = Vector3.new(-606,221,768), jump=true},
+    {pos = Vector3.new(-596,221,768), jump=true},
+    {pos = Vector3.new(-585,221,768), jump=true},
+    {pos = Vector3.new(-573,221,768), jump=true},
+    {pos = Vector3.new(-562,221,767), jump=true},
+    {pos = Vector3.new(-550,221,767), jump=true},
+    {pos = Vector3.new(-539,221,767), jump=true},
+    {pos = Vector3.new(-530,229,766), jump=true},
+    {pos = Vector3.new(-522,235,761), jump=true},
+    {pos = Vector3.new(-515,242,766), jump=true},
+    {pos = Vector3.new(-507,248,761), jump=true},
+    {pos = Vector3.new(-500,253,766), jump=true},
+    {pos = Vector3.new(-487,250,768), jump=true},
+    {pos = Vector3.new(-476,251,768), jump=true},
+    {pos = Vector3.new(-465,251,769), jump=true},
+    {pos = Vector3.new(-455,251,772), jump=true},
+    {pos = Vector3.new(-444,251,775), jump=true},
+    {pos = Vector3.new(-432,251,779), jump=true},
+    {pos = Vector3.new(-425,251,785), jump=true},
+    {pos = Vector3.new(-418,251,787), jump=true},
+
+    -- Checkpoint 2
+    {pos = Vector3.new(-420,251,776), jump=true},
+    {pos = Vector3.new(-423,251,766), jump=true},
+    {pos = Vector3.new(-426,251,755), jump=true},
+    {pos = Vector3.new(-430,251,744), jump=true},
+    {pos = Vector3.new(-434,251,733), jump=true},
+    {pos = Vector3.new(-438,251,722), jump=true},
+    {pos = Vector3.new(-440,250,714), jump=true},
+    {pos = Vector3.new(-442,253,703), jump=true},
+    {pos = Vector3.new(-437,257,694), jump=true},
+    {pos = Vector3.new(-426,263,693), jump=true},
+    {pos = Vector3.new(-417,274,687), jump=true},
+    {pos = Vector3.new(-408,274,685), jump=true},
+    {pos = Vector3.new(-402,285,686), jump=true},
+    {pos = Vector3.new(-391,286,686), jump=true},
+    {pos = Vector3.new(-377,282,685), jump=true},
+    {pos = Vector3.new(-368,286,684), jump=false},
+    {pos = Vector3.new(-358,291,683), jump=true},
+    {pos = Vector3.new(-347,299,682), jump=true},
+    {pos = Vector3.new(-334,305,683), jump=true},
+    {pos = Vector3.new(-324,305,675), jump=false},
+    {pos = Vector3.new(-324,313,664), jump=true},
+    {pos = Vector3.new(-319,323,651), jump=true},
+    {pos = Vector3.new(-309,325,643), jump=true},
+    {pos = Vector3.new(-304,332,635), jump=true},
+    {pos = Vector3.new(-304,337,635), jump=false},
+    {pos = Vector3.new(-309,350,629), jump=true},
+    {pos = Vector3.new(-319,359,629), jump=true},
+    {pos = Vector3.new(-324,361,622), jump=true},
+    {pos = Vector3.new(-334,373,616), jump=true},
+    {pos = Vector3.new(-344,378,605), jump=true},
+    {pos = Vector3.new(-340,386,595), jump=true},
+    {pos = Vector3.new(-338,390,586), jump=true},
+    {pos = Vector3.new(-335,390,573), jump=true},
+    {pos = Vector3.new(-334,390,565), jump=true},
+    {pos = Vector3.new(-333,390,554), jump=true},
+    {pos = Vector3.new(-332,390,544), jump=true},
+    {pos = Vector3.new(-330,390,535), jump=true},
+    {pos = Vector3.new(-327,390,525), jump=true},
+
+    -- Checkpoint 3
+    {pos = Vector3.new(-325,390,543), jump=false},
+    {pos = Vector3.new(-316,390,550), jump=true},
+    {pos = Vector3.new(-311,389,557), jump=true},
+    {pos = Vector3.new(-299,391,557), jump=true},
+    {pos = Vector3.new(-287,390,557), jump=true},
+    {pos = Vector3.new(-271,396,559), jump=true},
+    {pos = Vector3.new(-256,394,561), jump=true},
+    {pos = Vector3.new(-241,400,563), jump=true},
+    {pos = Vector3.new(-226,399,560), jump=true},
+    {pos = Vector3.new(-219,400,560), jump=false},
+    {pos = Vector3.new(-208,400,564), jump=true},
+    {pos = Vector3.new(-198,401,558), jump=true},
+    {pos = Vector3.new(-189,401,559), jump=false},
+    {pos = Vector3.new(-180,401,568), jump=true},
+    {pos = Vector3.new(-174,401,570), jump=false},
+    {pos = Vector3.new(-166,402,577), jump=true},
+    {pos = Vector3.new(-153,409,572), jump=true},
+    {pos = Vector3.new(-145,402,562), jump=true},
+    {pos = Vector3.new(-131,396,564), jump=true},
+    {pos = Vector3.new(-119,392,563), jump=true},
+    {pos = Vector3.new(-109,403,562), jump=true},
+    {pos = Vector3.new(-100,407,560), jump=true},
+    {pos = Vector3.new(-89,408,560), jump=true},
+    {pos = Vector3.new(-78,410,561), jump=true},
+    {pos = Vector3.new(-67,403,560), jump=true},
+    {pos = Vector3.new(-55,407,559), jump=true},
+    {pos = Vector3.new(-45,411,559), jump=true},
+    {pos = Vector3.new(-36,417,560), jump=true},
+    {pos = Vector3.new(-26,416,559), jump=true},
+    {pos = Vector3.new(-16,419,557), jump=true},
+    {pos = Vector3.new(-5,421,559), jump=true},
+    {pos = Vector3.new(7,419,560), jump=true},
+    {pos = Vector3.new(14,418,559), jump=false},
+    {pos = Vector3.new(27,420,559), jump=true},
+    {pos = Vector3.new(43,420,559), jump=true},
+    {pos = Vector3.new(55,422,559), jump=true},
+    {pos = Vector3.new(69,415,562), jump=true},
+    {pos = Vector3.new(82,415,558), jump=true},
+    {pos = Vector3.new(94,413,558), jump=true},
+    {pos = Vector3.new(108,412,555), jump=true},
+    {pos = Vector3.new(120,415,554), jump=true},
+    {pos = Vector3.new(132,415,552), jump=true},
+    {pos = Vector3.new(145,419,550), jump=true},
+    {pos = Vector3.new(159,415,549), jump=true},
+    {pos = Vector3.new(170,421,548), jump=true},
+    {pos = Vector3.new(182,428,546), jump=true},
+    {pos = Vector3.new(193,430,543), jump=true},
+    {pos = Vector3.new(205,429,540), jump=true},
+    {pos = Vector3.new(216,432,537), jump=true},
+    {pos = Vector3.new(228,434,533), jump=true},
+    {pos = Vector3.new(239,432,526), jump=true},
+    {pos = Vector3.new(250,432,521), jump=true},
+    {pos = Vector3.new(262,431,516), jump=true},
+    {pos = Vector3.new(289,431,500), jump=false},
+    {pos = Vector3.new(294,431,494), jump=false},
+
+    -- Checkpoint 4
+    {pos = Vector3.new(303,432,500), jump=false},
+    {pos = Vector3.new(308,434,495), jump=false},
+    {pos = Vector3.new(315,433,492), jump=false},
+    {pos = Vector3.new(327,435,495), jump=true},
+    {pos = Vector3.new(341,436,495), jump=true},
+    {pos = Vector3.new(351,439,491), jump=true},
+    {pos = Vector3.new(352,439,476), jump=true},
+    {pos = Vector3.new(361,442,471), jump=true},
+    {pos = Vector3.new(373,445,477), jump=true},
+    {pos = Vector3.new(381,448,487), jump=true},
+    {pos = Vector3.new(394,453,488), jump=true},
+    {pos = Vector3.new(402,457,484), jump=true},
+    {pos = Vector3.new(402,463,478), jump=true},
+    {pos = Vector3.new(401,465,470), jump=true},
+    {pos = Vector3.new(400,468,462), jump=true},
+    {pos = Vector3.new(399,458,449), jump=true},
+    {pos = Vector3.new(404,462,441), jump=true},
+    {pos = Vector3.new(402,472,433), jump=true},
+    {pos = Vector3.new(402,479,423), jump=true},
+    {pos = Vector3.new(394,478,414), jump=true},
+    {pos = Vector3.new(382,473,407), jump=true},
+    {pos = Vector3.new(375,476,397), jump=true},
+    {pos = Vector3.new(369,477,385), jump=true},
+    {pos = Vector3.new(364,482,376), jump=true},
+    {pos = Vector3.new(355,486,369), jump=true},
+    {pos = Vector3.new(346,490,364), jump=true},
+    {pos = Vector3.new(336,492,364), jump=true},
+    {pos = Vector3.new(321,492,343), jump=false},
+
+    -- Checkpoint 5
+    {pos = Vector3.new(334,492,341), jump=false},
+    {pos = Vector3.new(336,485,329), jump=true},
+    {pos = Vector3.new(344,467,317), jump=true},
+    {pos = Vector3.new(344,470,307), jump=true},
+    {pos = Vector3.new(345,468,293), jump=true},
+    {pos = Vector3.new(348,470,281), jump=true},
+    {pos = Vector3.new(340,468,269), jump=true},
+    {pos = Vector3.new(333,474,258), jump=true},
+    {pos = Vector3.new(322,468,253), jump=true},
+    {pos = Vector3.new(316,462,243), jump=true},
+    {pos = Vector3.new(294,437,247), jump=true},
+    {pos = Vector3.new(282,430,261), jump=true},
+    {pos = Vector3.new(273,429,273), jump=true},
+    {pos = Vector3.new(263,431,283), jump=true},
+    {pos = Vector3.new(249,420,291), jump=true},
+    {pos = Vector3.new(238,422,288), jump=true},
+    {pos = Vector3.new(228,419,289), jump=true},
+    {pos = Vector3.new(215,409,286), jump=true},
+    {pos = Vector3.new(205,400,280), jump=true},
+    {pos = Vector3.new(196,392,275), jump=true},
+    {pos = Vector3.new(187,384,285), jump=true},
+    {pos = Vector3.new(172,378,287), jump=true},
+    {pos = Vector3.new(163,371,286), jump=true},
+    {pos = Vector3.new(151,371,295), jump=true},
+    {pos = Vector3.new(138,371,287), jump=true},
+    {pos = Vector3.new(138,371,275), jump=true},
+    {pos = Vector3.new(130,360,264), jump=true},
+    {pos = Vector3.new(128,349,254), jump=true},
+    {pos = Vector3.new(123,339,244), jump=true},
+    {pos = Vector3.new(121,326,231), jump=true},
+    {pos = Vector3.new(111,320,222), jump=true},
+    {pos = Vector3.new(103,320,225), jump=true},
+    {pos = Vector3.new(95,323,223), jump=true},
+    {pos = Vector3.new(92,319,211), jump=true},
+    {pos = Vector3.new(85,306,201), jump=true},
+    {pos = Vector3.new(81,294,190), jump=true},
+    {pos = Vector3.new(73,288,180), jump=true},
+    {pos = Vector3.new(70,283,167), jump=true},
+    {pos = Vector3.new(64,275,156), jump=true},
+    {pos = Vector3.new(56,259,144), jump=true},
+    {pos = Vector3.new(54,249,128), jump=true},
+    {pos = Vector3.new(44,249,119), jump=true},
+    {pos = Vector3.new(33,249,110), jump=true},
+    {pos = Vector3.new(24,247,101), jump=true},
+    {pos = Vector3.new(24,248,90), jump=true},
+    {pos = Vector3.new(29,248,81), jump=true},
+    {pos = Vector3.new(37,257,74), jump=true},
+    {pos = Vector3.new(42,264,70), jump=true},
+    {pos = Vector3.new(52,266,65), jump=true},
+    {pos = Vector3.new(60,268,58), jump=true},
+    {pos = Vector3.new(63,271,45), jump=true},
+    {pos = Vector3.new(64,271,37), jump=false},
+    {pos = Vector3.new(66,274,25), jump=true},
+    {pos = Vector3.new(63,277,18), jump=false},
+    {pos = Vector3.new(54,284,11), jump=true},
+    {pos = Vector3.new(51,281,-3), jump=true},
+    {pos = Vector3.new(45,283,-10), jump=true},
+    {pos = Vector3.new(43,282,-23), jump=true},
+    {pos = Vector3.new(49,282,-34), jump=true},
+    {pos = Vector3.new(57,281,-41), jump=false},
+    {pos = Vector3.new(69,281,-49), jump=true},
+    {pos = Vector3.new(73,288,-58), jump=true},
+    {pos = Vector3.new(69,286,-65), jump=true},
+    {pos = Vector3.new(62,291,-73), jump=true},
+    {pos = Vector3.new(64,296,-83), jump=true},
+    {pos = Vector3.new(70,296,-93), jump=true},
+    {pos = Vector3.new(75,296,-101), jump=true},
+    {pos = Vector3.new(84,290,-114), jump=true},
+    {pos = Vector3.new(100,275,-114), jump=true},
+    {pos = Vector3.new(105,280,-116), jump=false},
+    {pos = Vector3.new(122,260,-124), jump=true},
+    {pos = Vector3.new(125,257,-136), jump=true},
+    {pos = Vector3.new(137,262,-140), jump=true},
+    {pos = Vector3.new(148,265,-141), jump=true},
+    {pos = Vector3.new(160,264,-143), jump=true},
+    {pos = Vector3.new(175,257,-142), jump=true},
+    {pos = Vector3.new(187,251,-136), jump=true},
+    {pos = Vector3.new(199,249,-131), jump=true},
+    {pos = Vector3.new(211,247,-123), jump=true},
+    {pos = Vector3.new(222,253,-118), jump=true},
+    {pos = Vector3.new(222,278,-118), jump=false},
+    {pos = Vector3.new(228,283,-119), jump=false},
+    {pos = Vector3.new(239,281,-124), jump=true},
+    {pos = Vector3.new(251,281,-128), jump=true},
+    {pos = Vector3.new(256,279,-130), jump=false},
+    {pos = Vector3.new(255,282,-131), jump=false},
+    {pos = Vector3.new(255,305,-131), jump=false},
+    {pos = Vector3.new(255,311,-138), jump=false},
+    {pos = Vector3.new(254,316,-146), jump=false},
+    {pos = Vector3.new(242,316,-151), jump=true},
+    {pos = Vector3.new(231,316,-146), jump=true},
+
+    -- Menuju Puncak
+    {pos = Vector3.new(222,316,-154), jump=true},
+    {pos = Vector3.new(215,315,-164), jump=true},
+    {pos = Vector3.new(207,316,-173), jump=true},
+    {pos = Vector3.new(200,316,-182), jump=true},
+    {pos = Vector3.new(197,316,-193), jump=true},
+    {pos = Vector3.new(198,316,-204), jump=true},
+    {pos = Vector3.new(189,316,-209), jump=true},
+    {pos = Vector3.new(176,316,-210), jump=false},
+    {pos = Vector3.new(173,314,-210), jump=false},
+    {pos = Vector3.new(160,319,-209), jump=true},
+    {pos = Vector3.new(148,317,-208), jump=true},
+    {pos = Vector3.new(136,316,-207), jump=true},
+    {pos = Vector3.new(123,319,-205), jump=true},
+    {pos = Vector3.new(111,322,-203), jump=true},
+    {pos = Vector3.new(102,325,-205), jump=true},
+    {pos = Vector3.new(89,321,-203), jump=true},
+    {pos = Vector3.new(77,330,-203), jump=true},
+    {pos = Vector3.new(73,333,-203), jump=false},
+    {pos = Vector3.new(64,343,-205), jump=true},
+    {pos = Vector3.new(61,346,-205), jump=false},
+    {pos = Vector3.new(51,349,-200), jump=true},
+    {pos = Vector3.new(39,348,-199), jump=true},
+    {pos = Vector3.new(26,350,-197), jump=true},
+    {pos = Vector3.new(14,353,-199), jump=true},
+    {pos = Vector3.new(1,357,-193), jump=true},
+    {pos = Vector3.new(-11,362,-198), jump=true},
+    {pos = Vector3.new(-18,362,-196), jump=false},
+    {pos = Vector3.new(-25,368,-192), jump=true},
+    {pos = Vector3.new(-29,373,-190), jump=false},
+    {pos = Vector3.new(-37,386,-187), jump=true},
+    {pos = Vector3.new(-46,391,-189), jump=true},
+    {pos = Vector3.new(-54,393,-197), jump=true},
+    {pos = Vector3.new(-66,401,-194), jump=true},
+    {pos = Vector3.new(-67,409,-189), jump=true},
+    {pos = Vector3.new(-75,417,-187), jump=true},
+    {pos = Vector3.new(-75,422,-191), jump=true},
+    {pos = Vector3.new(-82,430,-187), jump=true},
+    {pos = Vector3.new(-92,435,-190), jump=true},
+    {pos = Vector3.new(-104,443,-195), jump=true},
+    {pos = Vector3.new(-113,448,-189), jump=true},
+    {pos = Vector3.new(-125,448,-187), jump=true},
+    {pos = Vector3.new(-138,448,-187), jump=true},
+    {pos = Vector3.new(-149,456,-181), jump=true},
+    {pos = Vector3.new(-160,463,-185), jump=true},
+    {pos = Vector3.new(-168,472,-191), jump=true},
+    {pos = Vector3.new(-174,480,-185), jump=true},
+    {pos = Vector3.new(-180,487,-192), jump=true},
+    {pos = Vector3.new(-179,499,-188), jump=true},
+    {pos = Vector3.new(-177,506,-194), jump=true},
+    {pos = Vector3.new(-188,514,-200), jump=true},
+    {pos = Vector3.new(-202,511,-202), jump=true},
+    {pos = Vector3.new(-212,522,-208), jump=true},
+    {pos = Vector3.new(-213,526,-217), jump=true},
+    {pos = Vector3.new(-221,532,-223), jump=true},
+    {pos = Vector3.new(-210,538,-225), jump=true},
+    {pos = Vector3.new(-219,547,-229), jump=true},
+    {pos = Vector3.new(-225,547,-229), jump=false},
+    {pos = Vector3.new(-233,546,-235), jump=false},
+    {pos = Vector3.new(-242,545,-243), jump=false},
+    {pos = Vector3.new(-251,546,-250), jump=false},
+    {pos = Vector3.new(-256,549,-255), jump=false},
+    {pos = Vector3.new(-261,549,-260), jump=false},
+    {pos = Vector3.new(-260,557,-264), jump=true},
+    {pos = Vector3.new(-268,560,-259), jump=true},
+    {pos = Vector3.new(-277,566,-265), jump=true},
+    {pos = Vector3.new(-285,574,-271), jump=true},
+    {pos = Vector3.new(-294,580,-277), jump=true},
+    {pos = Vector3.new(-301,590,-283), jump=true},
+    {pos = Vector3.new(-308,597,-287), jump=true},
+    {pos = Vector3.new(-315,608,-292), jump=true},
+    {pos = Vector3.new(-321,618,-296), jump=true},
+    {pos = Vector3.new(-326,628,-301), jump=true},
+    {pos = Vector3.new(-337,634,-304), jump=true},
+    {pos = Vector3.new(-345,638,-309), jump=true},
+    {pos = Vector3.new(-352,645,-319), jump=true},
+    {pos = Vector3.new(-357,645,-319), jump=false},
+    {pos = Vector3.new(-365,646,-320), jump=true},
+    {pos = Vector3.new(-372,646,-326), jump=false},
+    {pos = Vector3.new(-377,652,-331), jump=true},
+    {pos = Vector3.new(-382,653,-335), jump=false},
+    {pos = Vector3.new(-392,654,-336), jump=true},
+    {pos = Vector3.new(-399,654,-340), jump=false},
+    {pos = Vector3.new(-409,660,-345), jump=true},
+    {pos = Vector3.new(-415,662,-352), jump=true},
+    {pos = Vector3.new(-425,662,-355), jump=true},
+    {pos = Vector3.new(-433,665,-361), jump=true},
+    {pos = Vector3.new(-438,667,-369), jump=true},
+    {pos = Vector3.new(-448,669,-370), jump=true},
+    {pos = Vector3.new(-456,670,-375), jump=true},
+    {pos = Vector3.new(-464,674,-380), jump=true},
+    {pos = Vector3.new(-470,680,-387), jump=true},
+    {pos = Vector3.new(-476,680,-398), jump=true},
+    {pos = Vector3.new(-479,681,-411), jump=true},
+    {pos = Vector3.new(-478,681,-422), jump=true},
+    {pos = Vector3.new(-477,680,-434), jump=true},
+    {pos = Vector3.new(-475,680,-445), jump=true},
+    {pos = Vector3.new(-474,681,-456), jump=true},
+    {pos = Vector3.new(-473,682,-467), jump=true},
+    {pos = Vector3.new(-471,684,-479), jump=true},
+    {pos = Vector3.new(-470,689,-488), jump=true},
+    {pos = Vector3.new(-464,694,-494), jump=true},
+    {pos = Vector3.new(-465,708,-497), jump=true},
+    {pos = Vector3.new(-468,716,-505), jump=true},
+    {pos = Vector3.new(-470,726,-514), jump=true},
+    {pos = Vector3.new(-470,735,-522), jump=true},
+    {pos = Vector3.new(-472,743,-531), jump=true},
+    {pos = Vector3.new(-474,761,-538), jump=true},
+    {pos = Vector3.new(-475,770,-547), jump=true},
+    {pos = Vector3.new(-478,780,-554), jump=true},
+    {pos = Vector3.new(-486,793,-560), jump=true},
+    {pos = Vector3.new(-496,797,-566), jump=true},
+    {pos = Vector3.new(-506,804,-569), jump=true},
+    {pos = Vector3.new(-514,814,-574), jump=true},
+    {pos = Vector3.new(-523,823,-578), jump=true},
+    {pos = Vector3.new(-532,833,-582), jump=true},
+    {pos = Vector3.new(-541,841,-584), jump=true},
+    {pos = Vector3.new(-551,848,-585), jump=true},
+    {pos = Vector3.new(-561,859,-584), jump=true},
+    {pos = Vector3.new(-570,862,-584), jump=true},
+    {pos = Vector3.new(-580,865,-577), jump=true},
+    {pos = Vector3.new(-587,870,-573), jump=true},
+    {pos = Vector3.new(-596,878,-567), jump=true},
+    {pos = Vector3.new(-602,889,-561), jump=true},
+    {pos = Vector3.new(-608,902,-559), jump=true},
+    {pos = Vector3.new(-609,908,-550), jump=true},
+    {pos = Vector3.new(-611,908,-539), jump=true},
+    {pos = Vector3.new(-615,908,-527), jump=true},
+    {pos = Vector3.new(-618,908,-516), jump=true},
+    {pos = Vector3.new(-621,908,-504), jump=true},
+    {pos = Vector3.new(-622,916,-496), jump=true},
+}
+
+local Checkpoints = {
+    [1] = 1,      -- mulai dari index 1
+    [2] = 46,     -- Checkpoint 1 selesai
+    [3] = 79,     -- Checkpoint 2 selesai
+    [4] = 128,    -- Checkpoint 3 selesai
+    [5] = 149,    -- Checkpoint 4 selesai
+    [6] = 239,    -- Checkpoint 5 selesai
+    [7] = 381,    -- Checkpoint 6 / puncak selesai
+}
+
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local LocalPlayer = Players.LocalPlayer
+local root = LocalPlayer.Character:WaitForChild("HumanoidRootPart")
+LocalPlayer.CharacterAdded:Connect(function(char)
+    char:WaitForChild("HumanoidRootPart")
+    root = char:WaitForChild("HumanoidRootPart")
+
+    -- Kalau auto respawn aktif, otomatis lanjut record/play lagi
+    if autoRespawn then
+        task.wait(1)
+        if isRecording then
+            startRecording()
+        elseif isReplaying then
+            startAutoWalk(currentIndex)
+        end
+    end
+
+    WindUI:Notify({
+        Title = "🔄 Respawn Detected",
+        Content = "Karakter kamu sudah respawn, sistem siap lagi!",
+        Duration = 3
+    })
+end)
+
+local walkSpeed, jumpHeight = 16, 10
+local isReplaying, isPaused, loopEnabled = false, false, false
+local currentIndex = 1
+
+-- 🌀 Gerak smooth
+local function moveSmooth(endPos, isJump)
+    local startPos = root.Position
+    local distance = (startPos - endPos).Magnitude
+    local duration = math.clamp(distance / walkSpeed, 0.1, 0.5)
+    local t = 0
+    while t < 1 and isReplaying do
+        if isPaused then
+            task.wait(0.05)
+        else
+            local dt = RunService.Heartbeat:Wait()
+            t += dt / duration
+            local pos = startPos:Lerp(endPos, math.clamp(t,0,1))
+            if isJump then
+                local arc = math.sin(math.pi * t) * jumpHeight
+                pos = Vector3.new(pos.X,pos.Y+arc,pos.Z)
+            end
+            root.CFrame = CFrame.new(pos)
+        end
+    end
+end
+
+local function startAutoWalk(fromIndex)
+    if isReplaying then return end
+    isReplaying, isPaused, currentIndex = true, false, fromIndex or 1
+    WindUI:Notify({Title=GradientText("Auto Walk Dimulai", galaxyGradient),Content="Mulai dari checkpoint "..tostring(fromIndex or 1),Duration=3})
+
+    task.spawn(function()
+        while isReplaying do
+            for i=currentIndex,#Path-1 do
+                if not isReplaying then break end
+                currentIndex=i
+                moveSmooth(Path[i+1].pos, Path[i+1].jump)
+            end
+            if loopEnabled and isReplaying then
+                WindUI:Notify({Title="Loop Delay",Content="Mengulang dalam 2 detik...",Duration=2})
+                task.wait(2)
+                currentIndex=1
+            else
+                WindUI:Notify({Title=GradientText("Selesai", galaxyGradient),Content="Sudah sampai titik akhir!",Duration=3})
+                isReplaying=false
+            end
+        end
+    end)
+end
+
+-- 🔘 Tombol
+AutoWalkTab:Button({
+    Title = GradientText("Start / Resume", galaxyGradient),
+    Description = "Mulai atau lanjut dari posisi terakhir",
+    Callback = function()
+        if not isReplaying then startAutoWalk(currentIndex)
+        elseif isPaused then isPaused=false WindUI:Notify({Title="✅ Dilanjutkan",Content="Auto walk dilanjutkan.",Duration=3}) end
+    end
+})
+AutoWalkTab:Button({Title=GradientText("Pause", galaxyGradient),Description="Jeda sementara",Callback=function()if isReplaying and not isPaused then isPaused=true WindUI:Notify({Title="Dijeda",Content="Auto walk dijeda.",Duration=3})end end})
+AutoWalkTab:Button({Title=GradientText("Stop", galaxyGradient),Description="Reset ke awal",Callback=function()isReplaying=false isPaused=false currentIndex=1 WindUI:Notify({Title="Dihentikan",Content="Auto walk direset ke awal.",Duration=3})end})
+AutoWalkTab:Toggle({Title=GradientText("Loop Auto Walk",galaxyGradient),Description="Ulangi otomatis di akhir",Default=false,Callback=function(s)loopEnabled=s WindUI:Notify({Title="Loop "..(s and "Aktif" or "Nonaktif"),Content="Auto walk akan "..(s and "mengulang" or "berhenti"),Duration=3})end})
+AutoWalkTab:Section({Title=GradientText("Manual Checkpoint",galaxyGradient),Description="Mulai dari checkpoint tertentu"})
+for i=1,#Checkpoints do
+    AutoWalkTab:Button({
+        Title=GradientText("Start dari Checkpoint "..i,galaxyGradient),
+        Description="Mulai dari titik "..i,
+        Callback=function() startAutoWalk(Checkpoints[i]) end
+    })
+end
+
+
+------------------------------------------------------------
+-- 🎥 TAB RECORD WALK
+------------------------------------------------------------
+local RecordTab = Window:Tab({
+    Title = GradientText("Record Walk", galaxyGradient),
+    Icon = "camera",
+})
+
+local recordedPaths = {}
+local isRecording = false
+local recordLoop = false
+local autoRespawn = false
+local lastPosition = nil
+local recordConnection = nil
+
+local function startRecording()
+    if isRecording then return end
+    isRecording = true
+    recordedPaths = {}
+    lastPosition = root.Position
+    WindUI:Notify({Title="🎥 Record Dimulai",Content="Mulai merekam langkahmu setiap 0.002 detik.",Duration=3})
+
+    task.spawn(function()
+        local lastTime = tick()
+        while isRecording do
+            task.wait(0.1) -- ⏱️ interval tetap 0.2 detik
+            if not root or not root.Parent then break end
+            local currentPos = root.Position
+            table.insert(recordedPaths, {
+                pos = currentPos,
+                jump = false, -- bisa nanti ditambah deteksi loncat kalau mau
+                time = 0.002    -- simpan durasi antar titik
+            })
+        end
+    end)
+end
+
+local function stopRecording()
+    if not isRecording then return end
+    isRecording = false
+    if recordConnection then recordConnection:Disconnect() end
+    WindUI:Notify({Title="🛑 Record Berhenti",Content="Tersimpan "..#recordedPaths.." titik.",Duration=3})
+end
+
+local function playRecord()
+    if #recordedPaths == 0 then
+        WindUI:Notify({
+            Title = "⚠️ Tidak Ada Rekaman",
+            Content = "Mulai record dulu!",
+            Duration = 3
+        })
+        return
+    end
+
+    isReplaying = true
+    WindUI:Notify({
+        Title = "▶️ Memutar Rekaman",
+        Content = "Playback sesuai gerakan asli (lompat cepat).",
+        Duration = 3
+    })
+
+    local jumpHeight = 10
+
+    task.spawn(function()
+        for i = 1, #recordedPaths - 1 do
+            if not isReplaying then break end
+
+            local current = recordedPaths[i]
+            local nextStep = recordedPaths[i + 1]
+
+            local startPos = current.pos
+            local endPos = nextStep.pos
+            local duration = 0.1
+
+            if nextStep.jump then
+                -- 💥 Lompat cepat
+                local peak = Vector3.new(endPos.X, endPos.Y + jumpHeight, endPos.Z)
+                root.CFrame = CFrame.new(peak)
+                task.wait(0.15)
+            else
+                local t = 0
+                while t < 1 and isReplaying do
+                    local dt = RunService.Heartbeat:Wait()
+                    t += dt / duration
+                    root.CFrame = CFrame.new(startPos:Lerp(endPos, math.clamp(t, 0, 1)))
+                end
+            end
+        end
+
+        isReplaying = false
+        WindUI:Notify({
+            Title = "✅ Rekaman Selesai",
+            Content = "Playback berhenti.",
+            Duration = 3
+        })
+    end)
+end
+
+local function deleteRecord()
+    recordedPaths = {}
+    WindUI:Notify({Title="🗑️ Dihapus",Content="Semua rekaman dihapus.",Duration=3})
+end
+
+local function saveRecord()
+    if #recordedPaths == 0 then
+        WindUI:Notify({Title="⚠️ Tidak Ada Data",Content="Belum ada rekaman disimpan.",Duration=3})
+        return
+    end
+    setclipboard(game:GetService("HttpService"):JSONEncode(recordedPaths))
+    WindUI:Notify({Title="💾 Disalin ke Clipboard",Content="Rekaman berhasil disalin.",Duration=3})
+end
+
+-- 🔘 Tombol RecordTab
+RecordTab:Button({Title=GradientText("Start Record",galaxyGradient),Description="Mulai merekam gerakan",Callback=startRecording})
+RecordTab:Button({Title=GradientText("Stop Record",galaxyGradient),Description="Berhenti merekam",Callback=stopRecording})
+RecordTab:Button({Title=GradientText("Play Record",galaxyGradient),Description="Mainkan hasil rekaman",Callback=playRecord})
+RecordTab:Button({Title=GradientText("Delete Record",galaxyGradient),Description="Hapus semua data",Callback=deleteRecord})
+RecordTab:Toggle({Title=GradientText("Loop Record Playback",galaxyGradient),Description="Ulangi rekaman terus",Default=false,Callback=function(s)recordLoop=s end})
+RecordTab:Toggle({Title=GradientText("Auto Respawn",galaxyGradient),Description="Respawn otomatis saat jatuh",Default=false,Callback=function(s)autoRespawn=s end})
+RecordTab:Button({Title=GradientText("Play All Record",galaxyGradient),Description="Mainkan semua rekaman berurutan (fitur eksperimental)",Callback=playRecord})
+RecordTab:Button({Title=GradientText("Save Record",galaxyGradient),Description="Salin ke clipboard (JSON)",Callback=saveRecord})
+
+-- 💬 TAB: Detect Admin
+local DetectTab = Window:Tab({
+    Title = GradientText("Detect Admins", galaxyGradient),
+    Icon = "shield-alert",
+})
+
+-- ====== LOGIKA ======
+local Players = game:GetService("Players")
+local detectedAdmins = {}
+local viewHighlight = false
+local autoScan = false
+
+-- Fungsi cek admin
+local function isAdmin(player)
+    if player.UserId == game.CreatorId then return true end
+    if game.CreatorType == Enum.CreatorType.Group then
+        local ok, rank = pcall(function()
+            return player:GetRankInGroup(game.CreatorId)
+        end)
+        if ok and rank >= 200 then return true end
+    end
+    return false
+end
+
+-- Notifikasi WindUI
+local function showNotification(msg)
+    WindUI:Notify({
+        Title = GradientText("Admin Detector", galaxyGradient),
+        Content = msg,
+        Duration = 4,
+    })
+end
+
+-- Fungsi deteksi admin
+local function detectAdmins()
+    local found = false
+    for _, p in ipairs(Players:GetPlayers()) do
+        if isAdmin(p) then
+            found = true
+            if not detectedAdmins[p.UserId] then
+                detectedAdmins[p.UserId] = true
+                showNotification("⚠️ Admin Terdeteksi: " .. p.Name)
+            end
+            if viewHighlight and p.Character and p.Character:FindFirstChild("HumanoidRootPart") then
+                local hrp = p.Character.HumanoidRootPart
+                if not hrp:FindFirstChild("AdminHighlight") then
+                    local hl = Instance.new("SelectionBox")
+                    hl.Name = "AdminHighlight"
+                    hl.Adornee = hrp
+                    hl.Color3 = Color3.fromRGB(255, 0, 0)
+                    hl.LineThickness = 0.05
+                    hl.Parent = hrp
+                end
+            end
+        end
+    end
+    if not found then
+        showNotification("✅ Aman, tidak ada admin di sini.")
+    end
+end
+
+-- ====== UI ELEMENTS ======
+DetectTab:Paragraph({
+    Title = GradientText("Sistem Deteksi Admin", galaxyGradient),
+    Desc = "Mendeteksi admin yang masuk ke server & menandainya secara otomatis.",
+})
+
+-- Tombol cek manual
+DetectTab:Button({
+    Title = GradientText("Deteksi Manual", galaxyGradient),
+    Desc = "Periksa sekarang juga apakah ada admin di server.",
+    Callback = detectAdmins,
+})
+
+-- Toggle highlight admin
+DetectTab:Toggle({
+    Title = GradientText("Perjelas Ava admin", galaxyGradient),
+    Default = false,
+    Callback = function(state)
+        viewHighlight = state
+        showNotification("Highlight Admin: " .. (state and "ON" or "OFF"))
+        if not state then
+            for _, p in ipairs(Players:GetPlayers()) do
+                if p.Character and p.Character:FindFirstChild("HumanoidRootPart") then
+                    local hl = p.Character.HumanoidRootPart:FindFirstChild("AdminHighlight")
+                    if hl then hl:Destroy() end
+                end
+            end
+        else
+            detectAdmins()
+        end
+    end,
+})
+
+-- Toggle auto scan
+DetectTab:Toggle({
+    Title = GradientText("Auto Deteksi 60s", galaxyGradient),
+    Default = false,
+    Callback = function(state)
+        autoScan = state
+        showNotification("Auto Detect: " .. (state and "ON" or "OFF"))
+    end,
+})
+
+-- Info paragraf
+DetectTab:Paragraph({
+    Title = GradientText("Cara Pakai", galaxyGradient),
+    Desc = [[
+1️⃣ Tekan "Detect Admin (Manual)" untuk memeriksa langsung.
+2️⃣ Aktifkan "Highlight Admin" untuk menandai karakter admin.
+3️⃣ Nyalakan "Auto Detect Admin 60s)" agar mendeteksi otomatis setiap 1 menit.
+    ]],
+})
+
+-- Notifikasi admin join
+Players.PlayerAdded:Connect(function(p)
+    if isAdmin(p) then
+        showNotification("⚠️ Admin baru masuk: " .. p.Name)
+        if viewHighlight then
+            repeat task.wait() until p.Character and p.Character:FindFirstChild("HumanoidRootPart")
+            local hl = Instance.new("SelectionBox")
+            hl.Name = "AdminHighlight"
+            hl.Adornee = p.Character.HumanoidRootPart
+            hl.Color3 = Color3.fromRGB(255, 0, 0)
+            hl.LineThickness = 0.05
+            hl.Parent = p.Character.HumanoidRootPart
+        end
+    end
+end)
+
+-- Loop auto detect tiap 5 detik
+task.spawn(function()
+    while task.wait(60) do
+        if autoScan then
+            detectAdmins()
+        end
+    end
+end)
+
+
+-- 🌀 MISC TAB
+local MiscTab = Window:Tab({
+    Title = GradientText("Setting", galaxyGradient),
+    Icon = "wrench",
+})
+
+-- 🎨 SYSTEM GANTI TEMA + AUTO REMEMBER
+
+-- Folder penyimpanan config
+local ThemeConfigFolder = "VoidHubConfig"
+local ThemeConfigFile = ThemeConfigFolder .. "/theme.txt"
+
+-- Pastikan foldernya ada
+if not isfolder(ThemeConfigFolder) then
+    makefolder(ThemeConfigFolder)
+end
+
+-- Fungsi baca/simpan
+local function SaveTheme(theme)
+    writefile(ThemeConfigFile, theme)
+end
+
+local function LoadTheme()
+    if isfile(ThemeConfigFile) then
+        return readfile(ThemeConfigFile)
+    else
+        return "Dark" -- Default
+    end
+end
+
+-- 🧃 Tambahkan custom theme
+WindUI:AddTheme({
+    Name = "Ocean Blue",
+    Accent = WindUI:Gradient({
+        ["0"] = { Color = Color3.fromHex("#0077ff"), Transparency = 0 },
+        ["100"] = { Color = Color3.fromHex("#0048aa"), Transparency = 0 },
+    }, { Rotation = 45 }),
+    Dialog = Color3.fromHex("#0a0f18"),
+    Outline = Color3.fromHex("#3b82f6"),
+    Text = Color3.fromHex("#e0f2ff"),
+    Placeholder = Color3.fromHex("#6b7280"),
+    Background = Color3.fromHex("#0d1117"),
+    Button = Color3.fromHex("#1e3a8a"),
+    Icon = Color3.fromHex("#60a5fa")
+})
+
+WindUI:AddTheme({
+    Name = "Sakura Pink",
+    Accent = WindUI:Gradient({
+        ["0"] = { Color = Color3.fromHex("#ffb6c1"), Transparency = 0 },
+        ["100"] = { Color = Color3.fromHex("#ff8fab"), Transparency = 0 },
+    }, { Rotation = 0 }),
+    Dialog = Color3.fromHex("#ffe4e6"),
+    Outline = Color3.fromHex("#ff7ba8"),
+    Text = Color3.fromHex("#3f3f46"),
+    Placeholder = Color3.fromHex("#a1a1aa"),
+    Background = Color3.fromHex("#fff0f6"),
+    Button = Color3.fromHex("#f472b6"),
+    Icon = Color3.fromHex("#db2777")
+})
+
+WindUI:AddTheme({
+    Name = "Neon Cyber",
+    Accent = WindUI:Gradient({
+        ["0"] = { Color = Color3.fromHex("#00ff88"), Transparency = 0 },
+        ["100"] = { Color = Color3.fromHex("#009966"), Transparency = 0 },
+    }, { Rotation = 0 }),
+    Dialog = Color3.fromHex("#0d0d0d"),
+    Outline = Color3.fromHex("#00ff88"),
+    Text = Color3.fromHex("#eafff4"),
+    Placeholder = Color3.fromHex("#6b7280"),
+    Background = Color3.fromHex("#0a0a0a"),
+    Button = Color3.fromHex("#064e3b"),
+    Icon = Color3.fromHex("#10b981")
+})
+
+-- 🧩 Baca tema terakhir
+local lastTheme = LoadTheme()
+WindUI:SetTheme(lastTheme)
+
+-- 🔘 Dropdown untuk pilih tema
+MiscTab:Dropdown({
+    Title = GradientText("Pilih Tema", galaxyGradient),
+    Values = {"Dark", "Light", "Ocean Blue", "Sakura Pink", "Neon Cyber"},
+    Default = lastTheme,
+    Callback = function(value)
+        WindUI:SetTheme(value)
+        SaveTheme(value)
+        WindUI:Notify({
+            Title = GradientText("Tema DiUbah", galaxyGradient),
+            Content = "Sekarang tema-nya: " .. value,
+            Duration = 3,
+            Icon = "palette",
+        })
+    end,
+})
+
+
+MiscTab:Toggle({
+    Title = GradientText("Anti AFK", galaxyGradient),
+    Default = false,
+    Callback = function(state)
+        if state then
+            local vu = game:GetService("VirtualUser")
+            game.Players.LocalPlayer.Idled:Connect(function()
+                vu:Button2Down(Vector2.new(0,0), workspace.CurrentCamera.CFrame)
+                task.wait(1)
+                vu:Button2Up(Vector2.new(0,0), workspace.CurrentCamera.CFrame)
+            end)
+            print("Anti AFK aktif ✅")
+        else
+            print("Anti AFK dimatikan ❌")
+        end
+    end
+})
+
+MiscTab:Button({
+    Title = GradientText("Rejoin Server", galaxyGradient),
+    Callback = function()
+        local TeleportService = game:GetService("TeleportService")
+        local player = game.Players.LocalPlayer
+
+        -- Coba teleport ke server yang sama
+        TeleportService:TeleportToPlaceInstance(game.PlaceId, game.JobId, player)
+        print("Rejoining current server... 🔁")
+    end
+})
+
+local currentSound = nil
+local musicEnabled = false
+
+MiscTab:Input({
+    Title = GradientText("Play Musik", galaxyGradient),
+    PlaceholderText = "Masukkan ID...",
+    RemoveTextAfterFocusLost = true,
+    Callback = function(id)
+        -- Hapus musik lama (kalau ada)
+        if currentSound then
+            currentSound:Destroy()
+            currentSound = nil
+        end
+
+        -- Buat sound baru
+        local s = Instance.new("Sound")
+        s.SoundId = "rbxassetid://" .. id
+        s.Volume = 1
+        s.Looped = true
+        s.Parent = workspace
+        currentSound = s
+
+        -- Mainkan kalau toggle aktif
+        if musicEnabled then
+            s:Play()
+            print("Lagu diputar:", id)
+        else
+            print("Lagu siap, tapi toggle musik OFF.")
+        end
+    end
+})
+
+MiscTab:Toggle({
+    Title = GradientText("Play", galaxyGradient),
+    Default = false,
+    Callback = function(value)
+        musicEnabled = value
+        if currentSound then
+            if value then
+                currentSound:Play()
+                print("Musik dihidupkan.")
+            else
+                currentSound:Pause()
+                print("Musik dimatikan.")
+            end
+        else
+            print("Belum ada musik yang dipilih.")
+        end
+    end
+})
+
+-- 🚀 Anti-Lag (Optimized Map Cleaner)
+local antiLagEnabled = false
+local hiddenParts = {}
+
+MiscTab:Toggle({
+    Title = GradientText("AntiLag (BUG)", galaxyGradient),
+    Default = false,
+    Desc = "Hapus objek dekoratif map biar performa meningkat.",
+    Callback = function(state)
+        antiLagEnabled = state
+
+        if state then
+            local removedCount = 0
+            for _, obj in pairs(workspace:GetDescendants()) do
+                -- 🎯 Hindari hapus hal penting
+                if obj:IsA("BasePart") 
+                    and obj.Parent ~= game.Players.LocalPlayer.Character
+                    and not obj:IsDescendantOf(game.Players)
+                    and not obj:IsDescendantOf(game.CoreGui)
+                    and not obj:IsDescendantOf(game.Lighting)
+                    and not obj:IsDescendantOf(game.ReplicatedStorage)
+                    and not obj:IsDescendantOf(game.StarterGui)
+                then
+                    -- 🎨 Deteksi part dekoratif (nama-nama umum)
+                    local lowerName = string.lower(obj.Name)
+                    if string.find(lowerName, "tree") 
+                    or string.find(lowerName, "rock")
+                    or string.find(lowerName, "grass")
+                    or string.find(lowerName, "bush")
+                    or string.find(lowerName, "leaf")
+                    or string.find(lowerName, "flower")
+                    or string.find(lowerName, "deco")
+                    or string.find(lowerName, "prop")
+                    or string.find(lowerName, "building")
+                    or string.find(lowerName, "fence")
+                    or string.find(lowerName, "mountain")
+                    or (obj.Size.Magnitude > 150 and obj.Anchored) -- objek besar map statis
+                    then
+                        table.insert(hiddenParts, obj)
+                        obj.Transparency = 1
+                        obj.CanCollide = false
+                        if obj:FindFirstChildOfClass("Decal") then
+                            obj:FindFirstChildOfClass("Decal"):Destroy()
+                        end
+                        removedCount += 1
+                    end
+                end
+            end
+
+            WindUI:Notify({
+                Title = GradientText("AntiLag Aktif", galaxyGradient),
+                Content = "Map ringan! " .. removedCount .. " objek dekoratif disembunyikan.",
+                Duration = 4,
+                Icon = "zap",
+            })
+
+        else
+            -- 🔄 Kembalikan semua objek
+            local restored = 0
+            for _, obj in pairs(hiddenParts) do
+                if obj and obj:IsA("BasePart") then
+                    obj.Transparency = 0
+                    obj.CanCollide = true
+                    restored += 1
+                end
+            end
+            hiddenParts = {}
+
+            WindUI:Notify({
+                Title = GradientText("AntiLag OFF", galaxyGradient),
+                Content = "Map dikembalikan. " .. restored .. " objek dipulihkan.",
+                Duration = 4,
+                Icon = "cpu",
+            })
+        end
+    end
+})
+
+-- 💬 CREDITS TAB
+local CreditsTab = Window:Tab({
+    Title = GradientText("Credits", galaxyGradient),
+    Icon = "info",
+})
+
+CreditsTab:Paragraph({
+    Title = GradientText("Credits For Me", galaxyGradient),
+    Desc = "Developed by: @louissxe\nScript Support: @louissxe",
+})
+
