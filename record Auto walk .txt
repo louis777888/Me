@@ -168,7 +168,7 @@ local Path = {
     {pos = Vector3.new(-333,390,554), jump=true},
     {pos = Vector3.new(-332,390,544), jump=true},
     {pos = Vector3.new(-330,390,535), jump=true},
-    {pos = Vector3.new(-327,390,525), jump=true},
+    {pos = Vector3.new(-338,387,524), jump=true},
 
     -- Checkpoint 3
     {pos = Vector3.new(-325,390,543), jump=false},
@@ -760,7 +760,7 @@ local Path = {
     {pos = Vector3.new(-333,390,554), jump=true},
     {pos = Vector3.new(-332,390,544), jump=true},
     {pos = Vector3.new(-330,390,535), jump=true},
-    {pos = Vector3.new(-327,390,525), jump=true},
+    {pos = Vector3.new(-338,387,524), jump=true},
 
     -- Checkpoint 3
     {pos = Vector3.new(-325,390,543), jump=false},
