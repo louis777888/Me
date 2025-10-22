@@ -1,0 +1,1305 @@
+-- 🚀 Load WindUI versi terbaru
+local WindUI = loadstring(game:HttpGet("https://github.com/Footagesus/WindUI/releases/latest/download/main.lua"))()
+
+-- 🌈 Fungsi teks gradient (3 warna lembut)
+local function GradientText(text, colors)
+    local result = ""
+    local length = #text
+    for i = 1, length do
+        local t = (i - 1) / math.max(length - 1, 1)
+        local colorIndex = math.floor(t * (#colors - 1)) + 1
+        local nextIndex = math.clamp(colorIndex + 1, 1, #colors)
+        local ratio = (t * (#colors - 1)) % 1
+
+        local c1, c2 = colors[colorIndex], colors[nextIndex]
+        local r = math.floor((c1.R + (c2.R - c1.R) * ratio) * 255)
+        local g = math.floor((c1.G + (c2.G - c1.G) * ratio) * 255)
+        local b = math.floor((c1.B + (c2.B - c1.B) * ratio) * 255)
+        result ..= string.format('<font color="rgb(%d,%d,%d)">%s</font>', r, g, b, text:sub(i, i))
+    end
+    return result
+end
+
+-- 💖 Gradient: Pink → Ungu → Biru muda
+local galaxyGradient = {Color3.fromRGB(180,0,255), Color3.fromRGB(0,255,255)}
+
+-- 🪐 Buat Window Utama
+local Window = WindUI:CreateWindow({
+    Title = GradientText("LS Hub - YaHaYuk", galaxyGradient),
+    Icon = "crown",
+    Author = "made by @louissxe",
+    Folder = "LS Hub - YaHaYuk",
+    Size = UDim2.fromOffset(460, 290),
+    MinSize = Vector2.new(460, 290),
+    MaxSize = Vector2.new(850, 560),
+    Transparent = true,
+    Theme = "Light",
+    Resizable = true,
+    SideBarWidth = 200,
+    ToggleKey = Enum.KeyCode.G,
+    BackgroundImageTransparency = 0.42,
+    HideSearchBar = true,
+    ScrollBarEnabled = false,
+    User = {Enabled = true, Anonymous = true}
+})
+
+-- 🔊 Notifikasi saat UI muncul
+local SoundService = game:GetService("SoundService")
+local function playNotification()
+    local old = SoundService:FindFirstChild("VoidHub_Notification")
+    if old then old:Destroy() end
+    local s = Instance.new("Sound")
+    s.Name = "VoidHub_Notification"
+    s.SoundId = "rbxassetid://6026984224"
+    s.Volume = 3
+    s.PlayOnRemove = true
+    s.Parent = SoundService
+    s:Destroy()
+end
+playNotification()
+
+WindUI:Notify({
+    Title = GradientText("Welcome To LS Hub Galaxy", galaxyGradient),
+    Content = "Welcome back, explorer!",
+    Duration = 4
+})
+
+-- 🌍 Tab
+local AutoWalkTab = Window:Tab({
+    Title = GradientText("Yahayuk Normal", galaxyGradient),
+    Icon = "route",
+})
+
+local Path = {
+    -- Checkpoint 1
+    {pos = Vector3.new(-877,172,851), jump=false},
+    {pos = Vector3.new(-877,171,851), jump=false},
+    {pos = Vector3.new(-872,168,851), jump=false},
+    {pos = Vector3.new(-865,173,859), jump=true},
+    {pos = Vector3.new(-855,173,859), jump=true},
+    {pos = Vector3.new(-846,173,859), jump=true},
+    {pos = Vector3.new(-837,173,859), jump=true},
+    {pos = Vector3.new(-828,173,859), jump=true},
+    {pos = Vector3.new(-820,173,859), jump=true},
+    {pos = Vector3.new(-810,173,859), jump=true},
+    {pos = Vector3.new(-801,173,859), jump=true},
+    {pos = Vector3.new(-792,173,859), jump=true},
+    {pos = Vector3.new(-783,173,851), jump=true},
+    {pos = Vector3.new(-773,174,858), jump=true},
+    {pos = Vector3.new(-763,173,851), jump=true},
+    {pos = Vector3.new(-750,174,858), jump=true},
+    {pos = Vector3.new(-743,173,851), jump=true},
+    {pos = Vector3.new(-735,176,854), jump=true},
+    {pos = Vector3.new(-728,180,847), jump=true},
+    {pos = Vector3.new(-718,185,846), jump=true},
+    {pos = Vector3.new(-709,187,844), jump=true},
+    {pos = Vector3.new(-697,187,840), jump=false},
+    {pos = Vector3.new(-687,191,836), jump=true},
+    {pos = Vector3.new(-679,197,832), jump=true},
+    {pos = Vector3.new(-672,204,840), jump=true},
+    {pos = Vector3.new(-666,210,835), jump=true},
+    {pos = Vector3.new(-658,215,840), jump=true},
+    {pos = Vector3.new(-650,221,834), jump=true},
+    {pos = Vector3.new(-650,221,824), jump=true},
+    {pos = Vector3.new(-650,221,812), jump=true},
+    {pos = Vector3.new(-651,221,800), jump=true},
+    {pos = Vector3.new(-651,221,791), jump=true},
+    {pos = Vector3.new(-651,221,781), jump=true},
+    {pos = Vector3.new(-650,221,772), jump=true},
+    {pos = Vector3.new(-641,221,766), jump=true},
+    {pos = Vector3.new(-629,221,767), jump=true},
+    {pos = Vector3.new(-618,221,768), jump=true},
+    {pos = Vector3.new(-606,221,768), jump=true},
+    {pos = Vector3.new(-596,221,768), jump=true},
+    {pos = Vector3.new(-585,221,768), jump=true},
+    {pos = Vector3.new(-573,221,768), jump=true},
+    {pos = Vector3.new(-562,221,767), jump=true},
+    {pos = Vector3.new(-550,221,767), jump=true},
+    {pos = Vector3.new(-539,221,767), jump=true},
+    {pos = Vector3.new(-530,229,766), jump=true},
+    {pos = Vector3.new(-522,235,761), jump=true},
+    {pos = Vector3.new(-515,242,766), jump=true},
+    {pos = Vector3.new(-507,248,761), jump=true},
+    {pos = Vector3.new(-500,253,766), jump=true},
+    {pos = Vector3.new(-487,250,768), jump=true},
+    {pos = Vector3.new(-476,251,768), jump=true},
+    {pos = Vector3.new(-465,251,769), jump=true},
+    {pos = Vector3.new(-455,251,772), jump=true},
+    {pos = Vector3.new(-444,251,775), jump=true},
+    {pos = Vector3.new(-432,251,779), jump=true},
+    {pos = Vector3.new(-425,251,785), jump=true},
+    {pos = Vector3.new(-418,251,787), jump=true},
+
+    -- Checkpoint 2
+    {pos = Vector3.new(-420,251,776), jump=true},
+    {pos = Vector3.new(-423,251,766), jump=true},
+    {pos = Vector3.new(-426,251,755), jump=true},
+    {pos = Vector3.new(-430,251,744), jump=true},
+    {pos = Vector3.new(-434,251,733), jump=true},
+    {pos = Vector3.new(-438,251,722), jump=true},
+    {pos = Vector3.new(-440,250,714), jump=true},
+    {pos = Vector3.new(-442,253,703), jump=true},
+    {pos = Vector3.new(-437,257,694), jump=true},
+    {pos = Vector3.new(-426,263,693), jump=true},
+    {pos = Vector3.new(-417,274,687), jump=true},
+    {pos = Vector3.new(-408,274,685), jump=true},
+    {pos = Vector3.new(-402,285,686), jump=true},
+    {pos = Vector3.new(-391,286,686), jump=true},
+    {pos = Vector3.new(-377,282,685), jump=true},
+    {pos = Vector3.new(-368,286,684), jump=false},
+    {pos = Vector3.new(-358,291,683), jump=true},
+    {pos = Vector3.new(-347,299,682), jump=true},
+    {pos = Vector3.new(-334,305,683), jump=true},
+    {pos = Vector3.new(-324,305,675), jump=false},
+    {pos = Vector3.new(-324,313,664), jump=true},
+    {pos = Vector3.new(-319,323,651), jump=true},
+    {pos = Vector3.new(-309,325,643), jump=true},
+    {pos = Vector3.new(-304,332,635), jump=true},
+    {pos = Vector3.new(-304,337,635), jump=false},
+    {pos = Vector3.new(-309,350,629), jump=true},
+    {pos = Vector3.new(-319,359,629), jump=true},
+    {pos = Vector3.new(-324,361,622), jump=true},
+    {pos = Vector3.new(-334,373,616), jump=true},
+    {pos = Vector3.new(-344,378,605), jump=true},
+    {pos = Vector3.new(-340,386,595), jump=true},
+    {pos = Vector3.new(-338,390,586), jump=true},
+    {pos = Vector3.new(-335,390,573), jump=true},
+    {pos = Vector3.new(-334,390,565), jump=true},
+    {pos = Vector3.new(-333,390,554), jump=true},
+    {pos = Vector3.new(-332,390,544), jump=true},
+    {pos = Vector3.new(-330,390,535), jump=true},
+    {pos = Vector3.new(-327,390,525), jump=true},
+
+    -- Checkpoint 3
+    {pos = Vector3.new(-325,390,543), jump=false},
+    {pos = Vector3.new(-316,390,550), jump=true},
+    {pos = Vector3.new(-311,389,557), jump=true},
+    {pos = Vector3.new(-299,391,557), jump=true},
+    {pos = Vector3.new(-287,390,557), jump=true},
+    {pos = Vector3.new(-271,396,559), jump=true},
+    {pos = Vector3.new(-256,394,561), jump=true},
+    {pos = Vector3.new(-241,400,563), jump=true},
+    {pos = Vector3.new(-226,399,560), jump=true},
+    {pos = Vector3.new(-219,400,560), jump=false},
+    {pos = Vector3.new(-208,400,564), jump=true},
+    {pos = Vector3.new(-198,401,558), jump=true},
+    {pos = Vector3.new(-189,401,559), jump=false},
+    {pos = Vector3.new(-180,401,568), jump=true},
+    {pos = Vector3.new(-174,401,570), jump=false},
+    {pos = Vector3.new(-166,402,577), jump=true},
+    {pos = Vector3.new(-153,409,572), jump=true},
+    {pos = Vector3.new(-145,402,562), jump=true},
+    {pos = Vector3.new(-131,396,564), jump=true},
+    {pos = Vector3.new(-119,392,563), jump=true},
+    {pos = Vector3.new(-109,403,562), jump=true},
+    {pos = Vector3.new(-100,407,560), jump=true},
+    {pos = Vector3.new(-89,408,560), jump=true},
+    {pos = Vector3.new(-78,410,561), jump=true},
+    {pos = Vector3.new(-67,403,560), jump=true},
+    {pos = Vector3.new(-55,407,559), jump=true},
+    {pos = Vector3.new(-45,411,559), jump=true},
+    {pos = Vector3.new(-36,417,560), jump=true},
+    {pos = Vector3.new(-26,416,559), jump=true},
+    {pos = Vector3.new(-16,419,557), jump=true},
+    {pos = Vector3.new(-5,421,559), jump=true},
+    {pos = Vector3.new(7,419,560), jump=true},
+    {pos = Vector3.new(14,418,559), jump=false},
+    {pos = Vector3.new(27,420,559), jump=true},
+    {pos = Vector3.new(43,420,559), jump=true},
+    {pos = Vector3.new(55,422,559), jump=true},
+    {pos = Vector3.new(69,415,562), jump=true},
+    {pos = Vector3.new(82,415,558), jump=true},
+    {pos = Vector3.new(94,413,558), jump=true},
+    {pos = Vector3.new(108,412,555), jump=true},
+    {pos = Vector3.new(120,415,554), jump=true},
+    {pos = Vector3.new(132,415,552), jump=true},
+    {pos = Vector3.new(145,419,550), jump=true},
+    {pos = Vector3.new(159,415,549), jump=true},
+    {pos = Vector3.new(170,421,548), jump=true},
+    {pos = Vector3.new(182,428,546), jump=true},
+    {pos = Vector3.new(193,430,543), jump=true},
+    {pos = Vector3.new(205,429,540), jump=true},
+    {pos = Vector3.new(216,432,537), jump=true},
+    {pos = Vector3.new(228,434,533), jump=true},
+    {pos = Vector3.new(239,432,526), jump=true},
+    {pos = Vector3.new(250,432,521), jump=true},
+    {pos = Vector3.new(262,431,516), jump=true},
+    {pos = Vector3.new(289,431,500), jump=false},
+    {pos = Vector3.new(294,431,494), jump=false},
+
+    -- Checkpoint 4
+    {pos = Vector3.new(303,432,500), jump=false},
+    {pos = Vector3.new(308,434,495), jump=false},
+    {pos = Vector3.new(315,433,492), jump=false},
+    {pos = Vector3.new(327,435,495), jump=true},
+    {pos = Vector3.new(341,436,495), jump=true},
+    {pos = Vector3.new(351,439,491), jump=true},
+    {pos = Vector3.new(352,439,476), jump=true},
+    {pos = Vector3.new(361,442,471), jump=true},
+    {pos = Vector3.new(373,445,477), jump=true},
+    {pos = Vector3.new(381,448,487), jump=true},
+    {pos = Vector3.new(394,453,488), jump=true},
+    {pos = Vector3.new(402,457,484), jump=true},
+    {pos = Vector3.new(402,463,478), jump=true},
+    {pos = Vector3.new(401,465,470), jump=true},
+    {pos = Vector3.new(400,468,462), jump=true},
+    {pos = Vector3.new(399,458,449), jump=true},
+    {pos = Vector3.new(404,462,441), jump=true},
+    {pos = Vector3.new(402,472,433), jump=true},
+    {pos = Vector3.new(402,479,423), jump=true},
+    {pos = Vector3.new(394,478,414), jump=true},
+    {pos = Vector3.new(382,473,407), jump=true},
+    {pos = Vector3.new(375,476,397), jump=true},
+    {pos = Vector3.new(369,477,385), jump=true},
+    {pos = Vector3.new(364,482,376), jump=true},
+    {pos = Vector3.new(355,486,369), jump=true},
+    {pos = Vector3.new(346,490,364), jump=true},
+    {pos = Vector3.new(336,492,364), jump=true},
+    {pos = Vector3.new(321,492,343), jump=false},
+
+    -- Checkpoint 5
+    {pos = Vector3.new(334,492,341), jump=false},
+    {pos = Vector3.new(336,485,329), jump=true},
+    {pos = Vector3.new(344,467,317), jump=true},
+    {pos = Vector3.new(344,470,307), jump=true},
+    {pos = Vector3.new(345,468,293), jump=true},
+    {pos = Vector3.new(348,470,281), jump=true},
+    {pos = Vector3.new(340,468,269), jump=true},
+    {pos = Vector3.new(333,474,258), jump=true},
+    {pos = Vector3.new(322,468,253), jump=true},
+    {pos = Vector3.new(316,462,243), jump=true},
+    {pos = Vector3.new(294,437,247), jump=true},
+    {pos = Vector3.new(282,430,261), jump=true},
+    {pos = Vector3.new(273,429,273), jump=true},
+    {pos = Vector3.new(263,431,283), jump=true},
+    {pos = Vector3.new(249,420,291), jump=true},
+    {pos = Vector3.new(238,422,288), jump=true},
+    {pos = Vector3.new(228,419,289), jump=true},
+    {pos = Vector3.new(215,409,286), jump=true},
+    {pos = Vector3.new(205,400,280), jump=true},
+    {pos = Vector3.new(196,392,275), jump=true},
+    {pos = Vector3.new(187,384,285), jump=true},
+    {pos = Vector3.new(172,378,287), jump=true},
+    {pos = Vector3.new(163,371,286), jump=true},
+    {pos = Vector3.new(151,371,295), jump=true},
+    {pos = Vector3.new(138,371,287), jump=true},
+    {pos = Vector3.new(138,371,275), jump=true},
+    {pos = Vector3.new(130,360,264), jump=true},
+    {pos = Vector3.new(128,349,254), jump=true},
+    {pos = Vector3.new(123,339,244), jump=true},
+    {pos = Vector3.new(121,326,231), jump=true},
+    {pos = Vector3.new(111,320,222), jump=true},
+    {pos = Vector3.new(103,320,225), jump=true},
+    {pos = Vector3.new(95,323,223), jump=true},
+    {pos = Vector3.new(92,319,211), jump=true},
+    {pos = Vector3.new(85,306,201), jump=true},
+    {pos = Vector3.new(81,294,190), jump=true},
+    {pos = Vector3.new(73,288,180), jump=true},
+    {pos = Vector3.new(70,283,167), jump=true},
+    {pos = Vector3.new(64,275,156), jump=true},
+    {pos = Vector3.new(56,259,144), jump=true},
+    {pos = Vector3.new(54,249,128), jump=true},
+    {pos = Vector3.new(44,249,119), jump=true},
+    {pos = Vector3.new(33,249,110), jump=true},
+    {pos = Vector3.new(24,247,101), jump=true},
+    {pos = Vector3.new(24,248,90), jump=true},
+    {pos = Vector3.new(29,248,81), jump=true},
+    {pos = Vector3.new(37,257,74), jump=true},
+    {pos = Vector3.new(42,264,70), jump=true},
+    {pos = Vector3.new(52,266,65), jump=true},
+    {pos = Vector3.new(60,268,58), jump=true},
+    {pos = Vector3.new(63,271,45), jump=true},
+    {pos = Vector3.new(64,271,37), jump=false},
+    {pos = Vector3.new(66,274,25), jump=true},
+    {pos = Vector3.new(63,277,18), jump=false},
+    {pos = Vector3.new(54,284,11), jump=true},
+    {pos = Vector3.new(51,281,-3), jump=true},
+    {pos = Vector3.new(45,283,-10), jump=true},
+    {pos = Vector3.new(43,282,-23), jump=true},
+    {pos = Vector3.new(49,282,-34), jump=true},
+    {pos = Vector3.new(57,281,-41), jump=false},
+    {pos = Vector3.new(69,281,-49), jump=true},
+    {pos = Vector3.new(73,288,-58), jump=true},
+    {pos = Vector3.new(69,286,-65), jump=true},
+    {pos = Vector3.new(62,291,-73), jump=true},
+    {pos = Vector3.new(64,296,-83), jump=true},
+    {pos = Vector3.new(70,296,-93), jump=true},
+    {pos = Vector3.new(75,296,-101), jump=true},
+    {pos = Vector3.new(84,290,-114), jump=true},
+    {pos = Vector3.new(100,275,-114), jump=true},
+    {pos = Vector3.new(105,280,-116), jump=false},
+    {pos = Vector3.new(122,260,-124), jump=true},
+    {pos = Vector3.new(125,257,-136), jump=true},
+    {pos = Vector3.new(137,262,-140), jump=true},
+    {pos = Vector3.new(148,265,-141), jump=true},
+    {pos = Vector3.new(160,264,-143), jump=true},
+    {pos = Vector3.new(175,257,-142), jump=true},
+    {pos = Vector3.new(187,251,-136), jump=true},
+    {pos = Vector3.new(199,249,-131), jump=true},
+    {pos = Vector3.new(211,247,-123), jump=true},
+    {pos = Vector3.new(222,253,-118), jump=true},
+    {pos = Vector3.new(222,278,-118), jump=false},
+    {pos = Vector3.new(228,283,-119), jump=false},
+    {pos = Vector3.new(239,281,-124), jump=true},
+    {pos = Vector3.new(251,281,-128), jump=true},
+    {pos = Vector3.new(256,279,-130), jump=false},
+    {pos = Vector3.new(255,282,-131), jump=false},
+    {pos = Vector3.new(255,305,-131), jump=false},
+    {pos = Vector3.new(255,311,-138), jump=false},
+    {pos = Vector3.new(254,316,-146), jump=false},
+    {pos = Vector3.new(242,316,-151), jump=true},
+    {pos = Vector3.new(231,316,-146), jump=true},
+
+    -- Menuju Puncak
+    {pos = Vector3.new(222,316,-154), jump=true},
+    {pos = Vector3.new(215,315,-164), jump=true},
+    {pos = Vector3.new(207,316,-173), jump=true},
+    {pos = Vector3.new(200,316,-182), jump=true},
+    {pos = Vector3.new(197,316,-193), jump=true},
+    {pos = Vector3.new(198,316,-204), jump=true},
+    {pos = Vector3.new(189,316,-209), jump=true},
+    {pos = Vector3.new(176,316,-210), jump=false},
+    {pos = Vector3.new(173,314,-210), jump=false},
+    {pos = Vector3.new(160,319,-209), jump=true},
+    {pos = Vector3.new(148,317,-208), jump=true},
+    {pos = Vector3.new(136,316,-207), jump=true},
+    {pos = Vector3.new(123,319,-205), jump=true},
+    {pos = Vector3.new(111,322,-203), jump=true},
+    {pos = Vector3.new(102,325,-205), jump=true},
+    {pos = Vector3.new(89,321,-203), jump=true},
+    {pos = Vector3.new(77,330,-203), jump=true},
+    {pos = Vector3.new(73,333,-203), jump=false},
+    {pos = Vector3.new(64,343,-205), jump=true},
+    {pos = Vector3.new(61,346,-205), jump=false},
+    {pos = Vector3.new(51,349,-200), jump=true},
+    {pos = Vector3.new(39,348,-199), jump=true},
+    {pos = Vector3.new(26,350,-197), jump=true},
+    {pos = Vector3.new(14,353,-199), jump=true},
+    {pos = Vector3.new(1,357,-193), jump=true},
+    {pos = Vector3.new(-11,362,-198), jump=true},
+    {pos = Vector3.new(-18,362,-196), jump=false},
+    {pos = Vector3.new(-25,368,-192), jump=true},
+    {pos = Vector3.new(-29,373,-190), jump=false},
+    {pos = Vector3.new(-37,386,-187), jump=true},
+    {pos = Vector3.new(-46,391,-189), jump=true},
+    {pos = Vector3.new(-54,393,-197), jump=true},
+    {pos = Vector3.new(-66,401,-194), jump=true},
+    {pos = Vector3.new(-67,409,-189), jump=true},
+    {pos = Vector3.new(-75,417,-187), jump=true},
+    {pos = Vector3.new(-75,422,-191), jump=true},
+    {pos = Vector3.new(-82,430,-187), jump=true},
+    {pos = Vector3.new(-92,435,-190), jump=true},
+    {pos = Vector3.new(-104,443,-195), jump=true},
+    {pos = Vector3.new(-113,448,-189), jump=true},
+    {pos = Vector3.new(-125,448,-187), jump=true},
+    {pos = Vector3.new(-138,448,-187), jump=true},
+    {pos = Vector3.new(-149,456,-181), jump=true},
+    {pos = Vector3.new(-160,463,-185), jump=true},
+    {pos = Vector3.new(-168,472,-191), jump=true},
+    {pos = Vector3.new(-174,480,-185), jump=true},
+    {pos = Vector3.new(-180,487,-192), jump=true},
+    {pos = Vector3.new(-179,499,-188), jump=true},
+    {pos = Vector3.new(-177,506,-194), jump=true},
+    {pos = Vector3.new(-188,514,-200), jump=true},
+    {pos = Vector3.new(-202,511,-202), jump=true},
+    {pos = Vector3.new(-212,522,-208), jump=true},
+    {pos = Vector3.new(-213,526,-217), jump=true},
+    {pos = Vector3.new(-221,532,-223), jump=true},
+    {pos = Vector3.new(-210,538,-225), jump=true},
+    {pos = Vector3.new(-219,547,-229), jump=true},
+    {pos = Vector3.new(-225,547,-229), jump=false},
+    {pos = Vector3.new(-233,546,-235), jump=false},
+    {pos = Vector3.new(-242,545,-243), jump=false},
+    {pos = Vector3.new(-251,546,-250), jump=false},
+    {pos = Vector3.new(-256,549,-255), jump=false},
+    {pos = Vector3.new(-261,549,-260), jump=false},
+    {pos = Vector3.new(-260,557,-264), jump=true},
+    {pos = Vector3.new(-268,560,-259), jump=true},
+    {pos = Vector3.new(-277,566,-265), jump=true},
+    {pos = Vector3.new(-285,574,-271), jump=true},
+    {pos = Vector3.new(-294,580,-277), jump=true},
+    {pos = Vector3.new(-301,590,-283), jump=true},
+    {pos = Vector3.new(-308,597,-287), jump=true},
+    {pos = Vector3.new(-315,608,-292), jump=true},
+    {pos = Vector3.new(-321,618,-296), jump=true},
+    {pos = Vector3.new(-326,628,-301), jump=true},
+    {pos = Vector3.new(-337,634,-304), jump=true},
+    {pos = Vector3.new(-345,638,-309), jump=true},
+    {pos = Vector3.new(-352,645,-319), jump=true},
+    {pos = Vector3.new(-357,645,-319), jump=false},
+    {pos = Vector3.new(-365,646,-320), jump=true},
+    {pos = Vector3.new(-372,646,-326), jump=false},
+    {pos = Vector3.new(-377,652,-331), jump=true},
+    {pos = Vector3.new(-382,653,-335), jump=false},
+    {pos = Vector3.new(-392,654,-336), jump=true},
+    {pos = Vector3.new(-399,654,-340), jump=false},
+    {pos = Vector3.new(-409,660,-345), jump=true},
+    {pos = Vector3.new(-415,662,-352), jump=true},
+    {pos = Vector3.new(-425,662,-355), jump=true},
+    {pos = Vector3.new(-433,665,-361), jump=true},
+    {pos = Vector3.new(-438,667,-369), jump=true},
+    {pos = Vector3.new(-448,669,-370), jump=true},
+    {pos = Vector3.new(-456,670,-375), jump=true},
+    {pos = Vector3.new(-464,674,-380), jump=true},
+    {pos = Vector3.new(-470,680,-387), jump=true},
+    {pos = Vector3.new(-476,680,-398), jump=true},
+    {pos = Vector3.new(-479,681,-411), jump=true},
+    {pos = Vector3.new(-478,681,-422), jump=true},
+    {pos = Vector3.new(-477,680,-434), jump=true},
+    {pos = Vector3.new(-475,680,-445), jump=true},
+    {pos = Vector3.new(-474,681,-456), jump=true},
+    {pos = Vector3.new(-473,682,-467), jump=true},
+    {pos = Vector3.new(-471,684,-479), jump=true},
+    {pos = Vector3.new(-470,689,-488), jump=true},
+    {pos = Vector3.new(-464,694,-494), jump=true},
+    {pos = Vector3.new(-465,708,-497), jump=true},
+    {pos = Vector3.new(-468,716,-505), jump=true},
+    {pos = Vector3.new(-470,726,-514), jump=true},
+    {pos = Vector3.new(-470,735,-522), jump=true},
+    {pos = Vector3.new(-472,743,-531), jump=true},
+    {pos = Vector3.new(-474,761,-538), jump=true},
+    {pos = Vector3.new(-475,770,-547), jump=true},
+    {pos = Vector3.new(-478,780,-554), jump=true},
+    {pos = Vector3.new(-486,793,-560), jump=true},
+    {pos = Vector3.new(-496,797,-566), jump=true},
+    {pos = Vector3.new(-506,804,-569), jump=true},
+    {pos = Vector3.new(-514,814,-574), jump=true},
+    {pos = Vector3.new(-523,823,-578), jump=true},
+    {pos = Vector3.new(-532,833,-582), jump=true},
+    {pos = Vector3.new(-541,841,-584), jump=true},
+    {pos = Vector3.new(-551,848,-585), jump=true},
+    {pos = Vector3.new(-561,859,-584), jump=true},
+    {pos = Vector3.new(-570,862,-584), jump=true},
+    {pos = Vector3.new(-580,865,-577), jump=true},
+    {pos = Vector3.new(-587,870,-573), jump=true},
+    {pos = Vector3.new(-596,878,-567), jump=true},
+    {pos = Vector3.new(-602,889,-561), jump=true},
+    {pos = Vector3.new(-608,902,-559), jump=true},
+    {pos = Vector3.new(-609,908,-550), jump=true},
+    {pos = Vector3.new(-611,908,-539), jump=true},
+    {pos = Vector3.new(-615,908,-527), jump=true},
+    {pos = Vector3.new(-618,908,-516), jump=true},
+    {pos = Vector3.new(-621,908,-504), jump=true},
+    {pos = Vector3.new(-622,916,-496), jump=true},
+}
+
+local Checkpoints = {
+    [1] = 1,      -- mulai dari index 1
+    [2] = 46,     -- Checkpoint 1 selesai
+    [3] = 79,     -- Checkpoint 2 selesai
+    [4] = 128,    -- Checkpoint 3 selesai
+    [5] = 149,    -- Checkpoint 4 selesai
+    [6] = 239,    -- Checkpoint 5 selesai
+    [7] = 381,    -- Checkpoint 6 / puncak selesai
+}
+
+-- ⚙️ Variabel
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local LocalPlayer = Players.LocalPlayer
+local root = LocalPlayer.Character:WaitForChild("HumanoidRootPart")
+
+local walkSpeed = 24
+local jumpHeight = 10
+local isReplaying = false
+local isPaused = false
+local currentIndex = 1
+local loopEnabled = false
+
+-- 🌀 Fungsi gerak smooth
+local function moveSmooth(endPos, isJump)
+    local startPos = root.Position
+    local distance = (startPos - endPos).Magnitude
+    local duration = distance / walkSpeed
+    local t = 0
+
+    while t < 1 and isReplaying do
+        if isPaused then
+            task.wait(0.05)
+        else
+            local dt = RunService.Heartbeat:Wait()
+            t += dt / duration
+            local pos = startPos:Lerp(endPos, math.clamp(t, 0, 1))
+            if isJump then
+                local arc = math.sin(math.pi * t) * jumpHeight
+                pos = Vector3.new(pos.X, pos.Y + arc, pos.Z)
+            end
+            root.CFrame = CFrame.new(pos)
+        end
+    end
+end
+
+local function startAutoWalk(fromIndex)
+    if isReplaying then return end
+    isReplaying = true
+    isPaused = false
+    currentIndex = fromIndex or 1
+
+    WindUI:Notify({
+        Title = GradientText("Auto Walk Dimulai", galaxyGradient),
+        Content = "Mulai dari checkpoint " .. tostring(fromIndex or 1),
+        Duration = 3
+    })
+
+    task.spawn(function()
+        while isReplaying do
+            for i = currentIndex, #Path - 1 do
+                if not isReplaying then break end
+                currentIndex = i
+                moveSmooth(Path[i + 1].pos, Path[i + 1].jump)
+            end
+
+            if loopEnabled and isReplaying then
+                WindUI:Notify({
+                    Title = "Loop Delay",
+                    Content = "Auto walk akan mulai lagi dalam 2 detik...",
+                    Duration = 2
+                })
+                task.wait(2) -- delay sebelum restart loop
+                currentIndex = 1
+            else
+                WindUI:Notify({
+                    Title = GradientText("Selesai", galaxyGradient),
+                    Content = "Sudah sampai titik akhir!",
+                    Duration = 3
+                })
+                isReplaying = false
+                currentIndex = 1
+            end
+        end
+    end)
+end
+
+-- 🔘 Tombol Dasar
+AutoWalkTab:Button({
+    Title = GradientText("Start / Resume", galaxyGradient),
+    Description = "Mulai atau lanjut dari posisi terakhir",
+    Callback = function()
+        if not isReplaying then
+            startAutoWalk(currentIndex)
+        elseif isPaused then
+            isPaused = false
+            WindUI:Notify({
+                Title = "✅ Dilanjutkan",
+                Content = "Auto walk dilanjutkan.",
+                Duration = 3
+            })
+        end
+    end
+})
+
+AutoWalkTab:Button({
+    Title = GradientText("Pause", galaxyGradient),
+    Description = "Jeda sementara auto walk",
+    Callback = function()
+        if isReplaying and not isPaused then
+            isPaused = true
+            WindUI:Notify({
+                Title = "Dijeda",
+                Content = "Auto walk dijeda sementara.",
+                Duration = 3
+            })
+        end
+    end
+})
+
+AutoWalkTab:Button({
+    Title = GradientText("Stop", galaxyGradient),
+    Description = "Hentikan dan reset ke awal",
+    Callback = function()
+        isReplaying = false
+        isPaused = false
+        currentIndex = 1
+        WindUI:Notify({
+            Title = "Dihentikan",
+            Content = "Auto walk direset ke awal.",
+            Duration = 3
+        })
+    end
+})
+
+-- 🔁 Toggle Loop
+AutoWalkTab:Toggle({
+    Title = GradientText("Loop Auto Walk", galaxyGradient),
+    Description = "Hidupkan / matikan loop di akhir path",
+    Default = false,
+    Callback = function(state)
+        loopEnabled = state
+        WindUI:Notify({
+            Title = "Loop " .. (state and "Aktif" or "Nonaktif"),
+            Content = "Auto walk akan " .. (state and "ulang saat sampai akhir" or "berhenti di akhir"),
+            Duration = 3
+        })
+    end
+})
+
+-- 🧭 Manual Checkpoint
+AutoWalkTab:Section({
+    Title = GradientText("Manual Checkpoint", galaxyGradient),
+    Description = "Mulai dari checkpoint tertentu"
+})
+
+for i = 1, #Checkpoints do
+    AutoWalkTab:Button({
+        Title = GradientText("Start dari Checkpoint " .. i, galaxyGradient),
+        Description = "Mulai dari titik " .. i,
+        Callback = function()
+            startAutoWalk(Checkpoints[i])
+        end
+    })
+end
+------------------------------------------------------------
+-- 🌍 TAB AUTO WALK
+------------------------------------------------------------
+local AutoWalkTab = Window:Tab({
+    Title = GradientText("Yahayuk SpeedRun", galaxyGradient),
+    Icon = "route",
+})
+
+AutoWalkTab:Button({
+    Title = GradientText("INFORMASI", galaxyGradient),
+    Desc = "Mode SpeedRun, lebih cepat",
+    Callback = function() warn("Baca!") end,
+})
+
+local Path = {
+    -- Checkpoint 1
+    {pos = Vector3.new(-877,172,851), jump=false},
+    {pos = Vector3.new(-877,171,851), jump=false},
+    {pos = Vector3.new(-872,168,851), jump=false},
+    {pos = Vector3.new(-865,173,859), jump=true},
+    {pos = Vector3.new(-855,173,859), jump=true},
+    {pos = Vector3.new(-846,173,859), jump=true},
+    {pos = Vector3.new(-837,173,859), jump=true},
+    {pos = Vector3.new(-828,173,859), jump=true},
+    {pos = Vector3.new(-820,173,859), jump=true},
+    {pos = Vector3.new(-810,173,859), jump=true},
+    {pos = Vector3.new(-801,173,859), jump=true},
+    {pos = Vector3.new(-792,173,859), jump=true},
+    {pos = Vector3.new(-783,173,851), jump=true},
+    {pos = Vector3.new(-773,174,858), jump=true},
+    {pos = Vector3.new(-763,173,851), jump=true},
+    {pos = Vector3.new(-750,174,858), jump=true},
+    {pos = Vector3.new(-743,173,851), jump=true},
+    {pos = Vector3.new(-735,176,854), jump=true},
+    {pos = Vector3.new(-728,180,847), jump=true},
+    {pos = Vector3.new(-718,185,846), jump=true},
+    {pos = Vector3.new(-709,187,844), jump=true},
+    {pos = Vector3.new(-697,187,840), jump=false},
+    {pos = Vector3.new(-687,191,836), jump=true},
+    {pos = Vector3.new(-679,197,832), jump=true},
+    {pos = Vector3.new(-672,204,840), jump=true},
+    {pos = Vector3.new(-666,210,835), jump=true},
+    {pos = Vector3.new(-658,215,840), jump=true},
+    {pos = Vector3.new(-650,221,834), jump=true},
+    {pos = Vector3.new(-650,221,824), jump=true},
+    {pos = Vector3.new(-650,221,812), jump=true},
+    {pos = Vector3.new(-651,221,800), jump=true},
+    {pos = Vector3.new(-651,221,791), jump=true},
+    {pos = Vector3.new(-651,221,781), jump=true},
+    {pos = Vector3.new(-650,221,772), jump=true},
+    {pos = Vector3.new(-641,221,766), jump=true},
+    {pos = Vector3.new(-629,221,767), jump=true},
+    {pos = Vector3.new(-618,221,768), jump=true},
+    {pos = Vector3.new(-606,221,768), jump=true},
+    {pos = Vector3.new(-596,221,768), jump=true},
+    {pos = Vector3.new(-585,221,768), jump=true},
+    {pos = Vector3.new(-573,221,768), jump=true},
+    {pos = Vector3.new(-562,221,767), jump=true},
+    {pos = Vector3.new(-550,221,767), jump=true},
+    {pos = Vector3.new(-539,221,767), jump=true},
+    {pos = Vector3.new(-530,229,766), jump=true},
+    {pos = Vector3.new(-522,235,761), jump=true},
+    {pos = Vector3.new(-515,242,766), jump=true},
+    {pos = Vector3.new(-507,248,761), jump=true},
+    {pos = Vector3.new(-500,253,766), jump=true},
+    {pos = Vector3.new(-487,250,768), jump=true},
+    {pos = Vector3.new(-476,251,768), jump=true},
+    {pos = Vector3.new(-465,251,769), jump=true},
+    {pos = Vector3.new(-455,251,772), jump=true},
+    {pos = Vector3.new(-444,251,775), jump=true},
+    {pos = Vector3.new(-432,251,779), jump=true},
+    {pos = Vector3.new(-425,251,785), jump=true},
+    {pos = Vector3.new(-418,251,787), jump=true},
+
+    -- Checkpoint 2
+    {pos = Vector3.new(-420,251,776), jump=true},
+    {pos = Vector3.new(-423,251,766), jump=true},
+    {pos = Vector3.new(-426,251,755), jump=true},
+    {pos = Vector3.new(-430,251,744), jump=true},
+    {pos = Vector3.new(-434,251,733), jump=true},
+    {pos = Vector3.new(-438,251,722), jump=true},
+    {pos = Vector3.new(-440,250,714), jump=true},
+    {pos = Vector3.new(-442,253,703), jump=true},
+    {pos = Vector3.new(-437,257,694), jump=true},
+    {pos = Vector3.new(-426,263,693), jump=true},
+    {pos = Vector3.new(-417,274,687), jump=true},
+    {pos = Vector3.new(-408,274,685), jump=true},
+    {pos = Vector3.new(-402,285,686), jump=true},
+    {pos = Vector3.new(-391,286,686), jump=true},
+    {pos = Vector3.new(-377,282,685), jump=true},
+    {pos = Vector3.new(-368,286,684), jump=false},
+    {pos = Vector3.new(-358,291,683), jump=true},
+    {pos = Vector3.new(-347,299,682), jump=true},
+    {pos = Vector3.new(-334,305,683), jump=true},
+    {pos = Vector3.new(-324,305,675), jump=false},
+    {pos = Vector3.new(-324,313,664), jump=true},
+    {pos = Vector3.new(-319,323,651), jump=true},
+    {pos = Vector3.new(-309,325,643), jump=true},
+    {pos = Vector3.new(-304,332,635), jump=true},
+    {pos = Vector3.new(-304,337,635), jump=false},
+    {pos = Vector3.new(-309,350,629), jump=true},
+    {pos = Vector3.new(-319,359,629), jump=true},
+    {pos = Vector3.new(-324,361,622), jump=true},
+    {pos = Vector3.new(-334,373,616), jump=true},
+    {pos = Vector3.new(-344,378,605), jump=true},
+    {pos = Vector3.new(-340,386,595), jump=true},
+    {pos = Vector3.new(-338,390,586), jump=true},
+    {pos = Vector3.new(-335,390,573), jump=true},
+    {pos = Vector3.new(-334,390,565), jump=true},
+    {pos = Vector3.new(-333,390,554), jump=true},
+    {pos = Vector3.new(-332,390,544), jump=true},
+    {pos = Vector3.new(-330,390,535), jump=true},
+    {pos = Vector3.new(-327,390,525), jump=true},
+
+    -- Checkpoint 3
+    {pos = Vector3.new(-325,390,543), jump=false},
+    {pos = Vector3.new(-316,390,550), jump=true},
+    {pos = Vector3.new(-311,389,557), jump=true},
+    {pos = Vector3.new(-299,391,557), jump=true},
+    {pos = Vector3.new(-287,390,557), jump=true},
+    {pos = Vector3.new(-271,396,559), jump=true},
+    {pos = Vector3.new(-256,394,561), jump=true},
+    {pos = Vector3.new(-241,400,563), jump=true},
+    {pos = Vector3.new(-226,399,560), jump=true},
+    {pos = Vector3.new(-219,400,560), jump=false},
+    {pos = Vector3.new(-208,400,564), jump=true},
+    {pos = Vector3.new(-198,401,558), jump=true},
+    {pos = Vector3.new(-189,401,559), jump=false},
+    {pos = Vector3.new(-180,401,568), jump=true},
+    {pos = Vector3.new(-174,401,570), jump=false},
+    {pos = Vector3.new(-166,402,577), jump=true},
+    {pos = Vector3.new(-153,409,572), jump=true},
+    {pos = Vector3.new(-145,402,562), jump=true},
+    {pos = Vector3.new(-131,396,564), jump=true},
+    {pos = Vector3.new(-119,392,563), jump=true},
+    {pos = Vector3.new(-109,403,562), jump=true},
+    {pos = Vector3.new(-100,407,560), jump=true},
+    {pos = Vector3.new(-89,408,560), jump=true},
+    {pos = Vector3.new(-78,410,561), jump=true},
+    {pos = Vector3.new(-67,403,560), jump=true},
+    {pos = Vector3.new(-55,407,559), jump=true},
+    {pos = Vector3.new(-45,411,559), jump=true},
+    {pos = Vector3.new(-36,417,560), jump=true},
+    {pos = Vector3.new(-26,416,559), jump=true},
+    {pos = Vector3.new(-16,419,557), jump=true},
+    {pos = Vector3.new(-5,421,559), jump=true},
+    {pos = Vector3.new(7,419,560), jump=true},
+    {pos = Vector3.new(14,418,559), jump=false},
+    {pos = Vector3.new(27,420,559), jump=true},
+    {pos = Vector3.new(43,420,559), jump=true},
+    {pos = Vector3.new(55,422,559), jump=true},
+    {pos = Vector3.new(69,415,562), jump=true},
+    {pos = Vector3.new(82,415,558), jump=true},
+    {pos = Vector3.new(94,413,558), jump=true},
+    {pos = Vector3.new(108,412,555), jump=true},
+    {pos = Vector3.new(120,415,554), jump=true},
+    {pos = Vector3.new(132,415,552), jump=true},
+    {pos = Vector3.new(145,419,550), jump=true},
+    {pos = Vector3.new(159,415,549), jump=true},
+    {pos = Vector3.new(170,421,548), jump=true},
+    {pos = Vector3.new(182,428,546), jump=true},
+    {pos = Vector3.new(193,430,543), jump=true},
+    {pos = Vector3.new(205,429,540), jump=true},
+    {pos = Vector3.new(216,432,537), jump=true},
+    {pos = Vector3.new(228,434,533), jump=true},
+    {pos = Vector3.new(239,432,526), jump=true},
+    {pos = Vector3.new(250,432,521), jump=true},
+    {pos = Vector3.new(262,431,516), jump=true},
+    {pos = Vector3.new(289,431,500), jump=false},
+    {pos = Vector3.new(294,431,494), jump=false},
+
+    -- Checkpoint 4
+    {pos = Vector3.new(303,432,500), jump=false},
+    {pos = Vector3.new(308,434,495), jump=false},
+    {pos = Vector3.new(315,433,492), jump=false},
+    {pos = Vector3.new(327,435,495), jump=true},
+    {pos = Vector3.new(341,436,495), jump=true},
+    {pos = Vector3.new(351,439,491), jump=true},
+    {pos = Vector3.new(352,439,476), jump=true},
+    {pos = Vector3.new(361,442,471), jump=true},
+    {pos = Vector3.new(373,445,477), jump=true},
+    {pos = Vector3.new(381,448,487), jump=true},
+    {pos = Vector3.new(394,453,488), jump=true},
+    {pos = Vector3.new(402,457,484), jump=true},
+    {pos = Vector3.new(402,463,478), jump=true},
+    {pos = Vector3.new(401,465,470), jump=true},
+    {pos = Vector3.new(400,468,462), jump=true},
+    {pos = Vector3.new(399,458,449), jump=true},
+    {pos = Vector3.new(404,462,441), jump=true},
+    {pos = Vector3.new(402,472,433), jump=true},
+    {pos = Vector3.new(402,479,423), jump=true},
+    {pos = Vector3.new(394,478,414), jump=true},
+    {pos = Vector3.new(382,473,407), jump=true},
+    {pos = Vector3.new(375,476,397), jump=true},
+    {pos = Vector3.new(369,477,385), jump=true},
+    {pos = Vector3.new(364,482,376), jump=true},
+    {pos = Vector3.new(355,486,369), jump=true},
+    {pos = Vector3.new(346,490,364), jump=true},
+    {pos = Vector3.new(336,492,364), jump=true},
+    {pos = Vector3.new(321,492,343), jump=false},
+
+    -- Checkpoint 5
+    {pos = Vector3.new(334,492,341), jump=false},
+    {pos = Vector3.new(336,485,329), jump=true},
+    {pos = Vector3.new(344,467,317), jump=true},
+    {pos = Vector3.new(344,470,307), jump=true},
+    {pos = Vector3.new(345,468,293), jump=true},
+    {pos = Vector3.new(348,470,281), jump=true},
+    {pos = Vector3.new(340,468,269), jump=true},
+    {pos = Vector3.new(333,474,258), jump=true},
+    {pos = Vector3.new(322,468,253), jump=true},
+    {pos = Vector3.new(316,462,243), jump=true},
+    {pos = Vector3.new(294,437,247), jump=true},
+    {pos = Vector3.new(282,430,261), jump=true},
+    {pos = Vector3.new(273,429,273), jump=true},
+    {pos = Vector3.new(263,431,283), jump=true},
+    {pos = Vector3.new(249,420,291), jump=true},
+    {pos = Vector3.new(238,422,288), jump=true},
+    {pos = Vector3.new(228,419,289), jump=true},
+    {pos = Vector3.new(215,409,286), jump=true},
+    {pos = Vector3.new(205,400,280), jump=true},
+    {pos = Vector3.new(196,392,275), jump=true},
+    {pos = Vector3.new(187,384,285), jump=true},
+    {pos = Vector3.new(172,378,287), jump=true},
+    {pos = Vector3.new(163,371,286), jump=true},
+    {pos = Vector3.new(151,371,295), jump=true},
+    {pos = Vector3.new(138,371,287), jump=true},
+    {pos = Vector3.new(138,371,275), jump=true},
+    {pos = Vector3.new(130,360,264), jump=true},
+    {pos = Vector3.new(128,349,254), jump=true},
+    {pos = Vector3.new(123,339,244), jump=true},
+    {pos = Vector3.new(121,326,231), jump=true},
+    {pos = Vector3.new(111,320,222), jump=true},
+    {pos = Vector3.new(103,320,225), jump=true},
+    {pos = Vector3.new(95,323,223), jump=true},
+    {pos = Vector3.new(92,319,211), jump=true},
+    {pos = Vector3.new(85,306,201), jump=true},
+    {pos = Vector3.new(81,294,190), jump=true},
+    {pos = Vector3.new(73,288,180), jump=true},
+    {pos = Vector3.new(70,283,167), jump=true},
+    {pos = Vector3.new(64,275,156), jump=true},
+    {pos = Vector3.new(56,259,144), jump=true},
+    {pos = Vector3.new(54,249,128), jump=true},
+    {pos = Vector3.new(44,249,119), jump=true},
+    {pos = Vector3.new(33,249,110), jump=true},
+    {pos = Vector3.new(24,247,101), jump=true},
+    {pos = Vector3.new(24,248,90), jump=true},
+    {pos = Vector3.new(29,248,81), jump=true},
+    {pos = Vector3.new(37,257,74), jump=true},
+    {pos = Vector3.new(42,264,70), jump=true},
+    {pos = Vector3.new(52,266,65), jump=true},
+    {pos = Vector3.new(60,268,58), jump=true},
+    {pos = Vector3.new(63,271,45), jump=true},
+    {pos = Vector3.new(64,271,37), jump=false},
+    {pos = Vector3.new(66,274,25), jump=true},
+    {pos = Vector3.new(63,277,18), jump=false},
+    {pos = Vector3.new(54,284,11), jump=true},
+    {pos = Vector3.new(51,281,-3), jump=true},
+    {pos = Vector3.new(45,283,-10), jump=true},
+    {pos = Vector3.new(43,282,-23), jump=true},
+    {pos = Vector3.new(49,282,-34), jump=true},
+    {pos = Vector3.new(57,281,-41), jump=false},
+    {pos = Vector3.new(69,281,-49), jump=true},
+    {pos = Vector3.new(73,288,-58), jump=true},
+    {pos = Vector3.new(69,286,-65), jump=true},
+    {pos = Vector3.new(62,291,-73), jump=true},
+    {pos = Vector3.new(64,296,-83), jump=true},
+    {pos = Vector3.new(70,296,-93), jump=true},
+    {pos = Vector3.new(75,296,-101), jump=true},
+    {pos = Vector3.new(84,290,-114), jump=true},
+    {pos = Vector3.new(100,275,-114), jump=true},
+    {pos = Vector3.new(105,280,-116), jump=false},
+    {pos = Vector3.new(122,260,-124), jump=true},
+    {pos = Vector3.new(125,257,-136), jump=true},
+    {pos = Vector3.new(137,262,-140), jump=true},
+    {pos = Vector3.new(148,265,-141), jump=true},
+    {pos = Vector3.new(160,264,-143), jump=true},
+    {pos = Vector3.new(175,257,-142), jump=true},
+    {pos = Vector3.new(187,251,-136), jump=true},
+    {pos = Vector3.new(199,249,-131), jump=true},
+    {pos = Vector3.new(211,247,-123), jump=true},
+    {pos = Vector3.new(222,253,-118), jump=true},
+    {pos = Vector3.new(222,278,-118), jump=false},
+    {pos = Vector3.new(228,283,-119), jump=false},
+    {pos = Vector3.new(239,281,-124), jump=true},
+    {pos = Vector3.new(251,281,-128), jump=true},
+    {pos = Vector3.new(256,279,-130), jump=false},
+    {pos = Vector3.new(255,282,-131), jump=false},
+    {pos = Vector3.new(255,305,-131), jump=false},
+    {pos = Vector3.new(255,311,-138), jump=false},
+    {pos = Vector3.new(254,316,-146), jump=false},
+    {pos = Vector3.new(242,316,-151), jump=true},
+    {pos = Vector3.new(231,316,-146), jump=true},
+
+    -- Menuju Puncak
+    {pos = Vector3.new(222,316,-154), jump=true},
+    {pos = Vector3.new(215,315,-164), jump=true},
+    {pos = Vector3.new(207,316,-173), jump=true},
+    {pos = Vector3.new(200,316,-182), jump=true},
+    {pos = Vector3.new(197,316,-193), jump=true},
+    {pos = Vector3.new(198,316,-204), jump=true},
+    {pos = Vector3.new(189,316,-209), jump=true},
+    {pos = Vector3.new(176,316,-210), jump=false},
+    {pos = Vector3.new(173,314,-210), jump=false},
+    {pos = Vector3.new(160,319,-209), jump=true},
+    {pos = Vector3.new(148,317,-208), jump=true},
+    {pos = Vector3.new(136,316,-207), jump=true},
+    {pos = Vector3.new(123,319,-205), jump=true},
+    {pos = Vector3.new(111,322,-203), jump=true},
+    {pos = Vector3.new(102,325,-205), jump=true},
+    {pos = Vector3.new(89,321,-203), jump=true},
+    {pos = Vector3.new(77,330,-203), jump=true},
+    {pos = Vector3.new(73,333,-203), jump=false},
+    {pos = Vector3.new(64,343,-205), jump=true},
+    {pos = Vector3.new(61,346,-205), jump=false},
+    {pos = Vector3.new(51,349,-200), jump=true},
+    {pos = Vector3.new(39,348,-199), jump=true},
+    {pos = Vector3.new(26,350,-197), jump=true},
+    {pos = Vector3.new(14,353,-199), jump=true},
+    {pos = Vector3.new(1,357,-193), jump=true},
+    {pos = Vector3.new(-11,362,-198), jump=true},
+    {pos = Vector3.new(-18,362,-196), jump=false},
+    {pos = Vector3.new(-25,368,-192), jump=true},
+    {pos = Vector3.new(-29,373,-190), jump=false},
+    {pos = Vector3.new(-37,386,-187), jump=true},
+    {pos = Vector3.new(-46,391,-189), jump=true},
+    {pos = Vector3.new(-54,393,-197), jump=true},
+    {pos = Vector3.new(-66,401,-194), jump=true},
+    {pos = Vector3.new(-67,409,-189), jump=true},
+    {pos = Vector3.new(-75,417,-187), jump=true},
+    {pos = Vector3.new(-75,422,-191), jump=true},
+    {pos = Vector3.new(-82,430,-187), jump=true},
+    {pos = Vector3.new(-92,435,-190), jump=true},
+    {pos = Vector3.new(-104,443,-195), jump=true},
+    {pos = Vector3.new(-113,448,-189), jump=true},
+    {pos = Vector3.new(-125,448,-187), jump=true},
+    {pos = Vector3.new(-138,448,-187), jump=true},
+    {pos = Vector3.new(-149,456,-181), jump=true},
+    {pos = Vector3.new(-160,463,-185), jump=true},
+    {pos = Vector3.new(-168,472,-191), jump=true},
+    {pos = Vector3.new(-174,480,-185), jump=true},
+    {pos = Vector3.new(-180,487,-192), jump=true},
+    {pos = Vector3.new(-179,499,-188), jump=true},
+    {pos = Vector3.new(-177,506,-194), jump=true},
+    {pos = Vector3.new(-188,514,-200), jump=true},
+    {pos = Vector3.new(-202,511,-202), jump=true},
+    {pos = Vector3.new(-212,522,-208), jump=true},
+    {pos = Vector3.new(-213,526,-217), jump=true},
+    {pos = Vector3.new(-221,532,-223), jump=true},
+    {pos = Vector3.new(-210,538,-225), jump=true},
+    {pos = Vector3.new(-219,547,-229), jump=true},
+    {pos = Vector3.new(-225,547,-229), jump=false},
+    {pos = Vector3.new(-233,546,-235), jump=false},
+    {pos = Vector3.new(-242,545,-243), jump=false},
+    {pos = Vector3.new(-251,546,-250), jump=false},
+    {pos = Vector3.new(-256,549,-255), jump=false},
+    {pos = Vector3.new(-261,549,-260), jump=false},
+    {pos = Vector3.new(-260,557,-264), jump=true},
+    {pos = Vector3.new(-268,560,-259), jump=true},
+    {pos = Vector3.new(-277,566,-265), jump=true},
+    {pos = Vector3.new(-285,574,-271), jump=true},
+    {pos = Vector3.new(-294,580,-277), jump=true},
+    {pos = Vector3.new(-301,590,-283), jump=true},
+    {pos = Vector3.new(-308,597,-287), jump=true},
+    {pos = Vector3.new(-315,608,-292), jump=true},
+    {pos = Vector3.new(-321,618,-296), jump=true},
+    {pos = Vector3.new(-326,628,-301), jump=true},
+    {pos = Vector3.new(-337,634,-304), jump=true},
+    {pos = Vector3.new(-345,638,-309), jump=true},
+    {pos = Vector3.new(-352,645,-319), jump=true},
+    {pos = Vector3.new(-357,645,-319), jump=false},
+    {pos = Vector3.new(-365,646,-320), jump=true},
+    {pos = Vector3.new(-372,646,-326), jump=false},
+    {pos = Vector3.new(-377,652,-331), jump=true},
+    {pos = Vector3.new(-382,653,-335), jump=false},
+    {pos = Vector3.new(-392,654,-336), jump=true},
+    {pos = Vector3.new(-399,654,-340), jump=false},
+    {pos = Vector3.new(-409,660,-345), jump=true},
+    {pos = Vector3.new(-415,662,-352), jump=true},
+    {pos = Vector3.new(-425,662,-355), jump=true},
+    {pos = Vector3.new(-433,665,-361), jump=true},
+    {pos = Vector3.new(-438,667,-369), jump=true},
+    {pos = Vector3.new(-448,669,-370), jump=true},
+    {pos = Vector3.new(-456,670,-375), jump=true},
+    {pos = Vector3.new(-464,674,-380), jump=true},
+    {pos = Vector3.new(-470,680,-387), jump=true},
+    {pos = Vector3.new(-476,680,-398), jump=true},
+    {pos = Vector3.new(-479,681,-411), jump=true},
+    {pos = Vector3.new(-478,681,-422), jump=true},
+    {pos = Vector3.new(-477,680,-434), jump=true},
+    {pos = Vector3.new(-475,680,-445), jump=true},
+    {pos = Vector3.new(-474,681,-456), jump=true},
+    {pos = Vector3.new(-473,682,-467), jump=true},
+    {pos = Vector3.new(-471,684,-479), jump=true},
+    {pos = Vector3.new(-470,689,-488), jump=true},
+    {pos = Vector3.new(-464,694,-494), jump=true},
+    {pos = Vector3.new(-465,708,-497), jump=true},
+    {pos = Vector3.new(-468,716,-505), jump=true},
+    {pos = Vector3.new(-470,726,-514), jump=true},
+    {pos = Vector3.new(-470,735,-522), jump=true},
+    {pos = Vector3.new(-472,743,-531), jump=true},
+    {pos = Vector3.new(-474,761,-538), jump=true},
+    {pos = Vector3.new(-475,770,-547), jump=true},
+    {pos = Vector3.new(-478,780,-554), jump=true},
+    {pos = Vector3.new(-486,793,-560), jump=true},
+    {pos = Vector3.new(-496,797,-566), jump=true},
+    {pos = Vector3.new(-506,804,-569), jump=true},
+    {pos = Vector3.new(-514,814,-574), jump=true},
+    {pos = Vector3.new(-523,823,-578), jump=true},
+    {pos = Vector3.new(-532,833,-582), jump=true},
+    {pos = Vector3.new(-541,841,-584), jump=true},
+    {pos = Vector3.new(-551,848,-585), jump=true},
+    {pos = Vector3.new(-561,859,-584), jump=true},
+    {pos = Vector3.new(-570,862,-584), jump=true},
+    {pos = Vector3.new(-580,865,-577), jump=true},
+    {pos = Vector3.new(-587,870,-573), jump=true},
+    {pos = Vector3.new(-596,878,-567), jump=true},
+    {pos = Vector3.new(-602,889,-561), jump=true},
+    {pos = Vector3.new(-608,902,-559), jump=true},
+    {pos = Vector3.new(-609,908,-550), jump=true},
+    {pos = Vector3.new(-611,908,-539), jump=true},
+    {pos = Vector3.new(-615,908,-527), jump=true},
+    {pos = Vector3.new(-618,908,-516), jump=true},
+    {pos = Vector3.new(-621,908,-504), jump=true},
+    {pos = Vector3.new(-622,916,-496), jump=true},
+}
+
+local Checkpoints = {
+    [1] = 1,      -- mulai dari index 1
+    [2] = 46,     -- Checkpoint 1 selesai
+    [3] = 79,     -- Checkpoint 2 selesai
+    [4] = 128,    -- Checkpoint 3 selesai
+    [5] = 149,    -- Checkpoint 4 selesai
+    [6] = 239,    -- Checkpoint 5 selesai
+    [7] = 381,    -- Checkpoint 6 / puncak selesai
+}
+
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local LocalPlayer = Players.LocalPlayer
+local root = LocalPlayer.Character:WaitForChild("HumanoidRootPart")
+LocalPlayer.CharacterAdded:Connect(function(char)
+    char:WaitForChild("HumanoidRootPart")
+    root = char:WaitForChild("HumanoidRootPart")
+
+    -- Kalau auto respawn aktif, otomatis lanjut record/play lagi
+    if autoRespawn then
+        task.wait(1)
+        if isRecording then
+            startRecording()
+        elseif isReplaying then
+            startAutoWalk(currentIndex)
+        end
+    end
+
+    WindUI:Notify({
+        Title = "🔄 Respawn Detected",
+        Content = "Karakter kamu sudah respawn, sistem siap lagi!",
+        Duration = 3
+    })
+end)
+
+local walkSpeed, jumpHeight = 16, 10
+local isReplaying, isPaused, loopEnabled = false, false, false
+local currentIndex = 1
+
+-- 🌀 Gerak smooth
+local function moveSmooth(endPos, isJump)
+    local startPos = root.Position
+    local distance = (startPos - endPos).Magnitude
+    local duration = math.clamp(distance / walkSpeed, 0.1, 0.45)
+    local t = 0
+    while t < 1 and isReplaying do
+        if isPaused then
+            task.wait(0.05)
+        else
+            local dt = RunService.Heartbeat:Wait()
+            t += dt / duration
+            local pos = startPos:Lerp(endPos, math.clamp(t,0,1))
+            if isJump then
+                local arc = math.sin(math.pi * t) * jumpHeight
+                pos = Vector3.new(pos.X,pos.Y+arc,pos.Z)
+            end
+            root.CFrame = CFrame.new(pos)
+        end
+    end
+end
+
+local function startAutoWalk(fromIndex)
+    if isReplaying then return end
+    isReplaying, isPaused, currentIndex = true, false, fromIndex or 1
+    WindUI:Notify({Title=GradientText("Auto Walk Dimulai", galaxyGradient),Content="Mulai dari checkpoint "..tostring(fromIndex or 1),Duration=3})
+
+    task.spawn(function()
+        while isReplaying do
+            for i=currentIndex,#Path-1 do
+                if not isReplaying then break end
+                currentIndex=i
+                moveSmooth(Path[i+1].pos, Path[i+1].jump)
+            end
+            if loopEnabled and isReplaying then
+                WindUI:Notify({Title="Loop Delay",Content="Mengulang dalam 2 detik...",Duration=2})
+                task.wait(2)
+                currentIndex=1
+            else
+                WindUI:Notify({Title=GradientText("Selesai", galaxyGradient),Content="Sudah sampai titik akhir!",Duration=3})
+                isReplaying=false
+            end
+        end
+    end)
+end
+
+-- 🔘 Tombol
+AutoWalkTab:Button({
+    Title = GradientText("Start / Resume", galaxyGradient),
+    Description = "Mulai atau lanjut dari posisi terakhir",
+    Callback = function()
+        if not isReplaying then startAutoWalk(currentIndex)
+        elseif isPaused then isPaused=false WindUI:Notify({Title="✅ Dilanjutkan",Content="Auto walk dilanjutkan.",Duration=3}) end
+    end
+})
+AutoWalkTab:Button({Title=GradientText("Pause", galaxyGradient),Description="Jeda sementara",Callback=function()if isReplaying and not isPaused then isPaused=true WindUI:Notify({Title="Dijeda",Content="Auto walk dijeda.",Duration=3})end end})
+AutoWalkTab:Button({Title=GradientText("Stop", galaxyGradient),Description="Reset ke awal",Callback=function()isReplaying=false isPaused=false currentIndex=1 WindUI:Notify({Title="Dihentikan",Content="Auto walk direset ke awal.",Duration=3})end})
+AutoWalkTab:Toggle({Title=GradientText("Loop Auto Walk",galaxyGradient),Description="Ulangi otomatis di akhir",Default=false,Callback=function(s)loopEnabled=s WindUI:Notify({Title="Loop "..(s and "Aktif" or "Nonaktif"),Content="Auto walk akan "..(s and "mengulang" or "berhenti"),Duration=3})end})
+AutoWalkTab:Section({Title=GradientText("Manual Checkpoint",galaxyGradient),Description="Mulai dari checkpoint tertentu"})
+for i=1,#Checkpoints do
+    AutoWalkTab:Button({
+        Title=GradientText("Start dari Checkpoint "..i,galaxyGradient),
+        Description="Mulai dari titik "..i,
+        Callback=function() startAutoWalk(Checkpoints[i]) end
+    })
+end
+
+
+------------------------------------------------------------
+-- 🎥 TAB RECORD WALK
+------------------------------------------------------------
+local RecordTab = Window:Tab({
+    Title = GradientText("Record Walk", galaxyGradient),
+    Icon = "camera",
+})
+
+local recordedPaths = {}
+local isRecording = false
+local recordLoop = false
+local autoRespawn = false
+local lastPosition = nil
+local recordConnection = nil
+
+local function startRecording()
+    if isRecording then return end
+    isRecording = true
+    recordedPaths = {}
+    lastPosition = root.Position
+    WindUI:Notify({Title="🎥 Record Dimulai",Content="Mulai merekam langkahmu setiap 0.002 detik.",Duration=3})
+
+    task.spawn(function()
+        local lastTime = tick()
+        while isRecording do
+            task.wait(0.1) -- ⏱️ interval tetap 0.2 detik
+            if not root or not root.Parent then break end
+            local currentPos = root.Position
+            table.insert(recordedPaths, {
+                pos = currentPos,
+                jump = false, -- bisa nanti ditambah deteksi loncat kalau mau
+                time = 0.002    -- simpan durasi antar titik
+            })
+        end
+    end)
+end
+
+local function stopRecording()
+    if not isRecording then return end
+    isRecording = false
+    if recordConnection then recordConnection:Disconnect() end
+    WindUI:Notify({Title="🛑 Record Berhenti",Content="Tersimpan "..#recordedPaths.." titik.",Duration=3})
+end
+
+local function playRecord()
+    if #recordedPaths == 0 then
+        WindUI:Notify({
+            Title = "⚠️ Tidak Ada Rekaman",
+            Content = "Mulai record dulu!",
+            Duration = 3
+        })
+        return
+    end
+
+    isReplaying = true
+    WindUI:Notify({
+        Title = "▶️ Memutar Rekaman",
+        Content = "Playback sesuai gerakan asli (lompat cepat).",
+        Duration = 3
+    })
+
+    local jumpHeight = 10
+
+    task.spawn(function()
+        for i = 1, #recordedPaths - 1 do
+            if not isReplaying then break end
+
+            local current = recordedPaths[i]
+            local nextStep = recordedPaths[i + 1]
+
+            local startPos = current.pos
+            local endPos = nextStep.pos
+            local duration = 0.1
+
+            if nextStep.jump then
+                -- 💥 Lompat cepat
+                local peak = Vector3.new(endPos.X, endPos.Y + jumpHeight, endPos.Z)
+                root.CFrame = CFrame.new(peak)
+                task.wait(0.15)
+            else
+                local t = 0
+                while t < 1 and isReplaying do
+                    local dt = RunService.Heartbeat:Wait()
+                    t += dt / duration
+                    root.CFrame = CFrame.new(startPos:Lerp(endPos, math.clamp(t, 0, 1)))
+                end
+            end
+        end
+
+        isReplaying = false
+        WindUI:Notify({
+            Title = "✅ Rekaman Selesai",
+            Content = "Playback berhenti.",
+            Duration = 3
+        })
+    end)
+end
+
+local function deleteRecord()
+    recordedPaths = {}
+    WindUI:Notify({Title="🗑️ Dihapus",Content="Semua rekaman dihapus.",Duration=3})
+end
+
+local function saveRecord()
+    if #recordedPaths == 0 then
+        WindUI:Notify({Title="⚠️ Tidak Ada Data",Content="Belum ada rekaman disimpan.",Duration=3})
+        return
+    end
+    setclipboard(game:GetService("HttpService"):JSONEncode(recordedPaths))
+    WindUI:Notify({Title="💾 Disalin ke Clipboard",Content="Rekaman berhasil disalin.",Duration=3})
+end
+
+-- 🔘 Tombol RecordTab
+RecordTab:Button({Title=GradientText("Start Record",galaxyGradient),Description="Mulai merekam gerakan",Callback=startRecording})
+RecordTab:Button({Title=GradientText("Stop Record",galaxyGradient),Description="Berhenti merekam",Callback=stopRecording})
+RecordTab:Button({Title=GradientText("Play Record",galaxyGradient),Description="Mainkan hasil rekaman",Callback=playRecord})
+RecordTab:Button({Title=GradientText("Delete Record",galaxyGradient),Description="Hapus semua data",Callback=deleteRecord})
+RecordTab:Toggle({Title=GradientText("Loop Record Playback",galaxyGradient),Description="Ulangi rekaman terus",Default=false,Callback=function(s)recordLoop=s end})
+RecordTab:Toggle({Title=GradientText("Auto Respawn",galaxyGradient),Description="Respawn otomatis saat jatuh",Default=false,Callback=function(s)autoRespawn=s end})
+RecordTab:Button({Title=GradientText("Play All Record",galaxyGradient),Description="Mainkan semua rekaman berurutan (fitur eksperimental)",Callback=playRecord})
+RecordTab:Button({Title=GradientText("Save Record",galaxyGradient),Description="Salin ke clipboard (JSON)",Callback=saveRecord})
