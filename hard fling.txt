@@ -1,0 +1,307 @@
+-- 🚀 Load WindUI versi terbaru
+local WindUI = loadstring(game:HttpGet("https://github.com/Footagesus/WindUI/releases/latest/download/main.lua"))()
+
+-- 🌈 Fungsi teks gradient (3 warna lembut)
+local function GradientText(text, colors)
+    local result = ""
+    local length = #text
+    for i = 1, length do
+        local t = (i - 1) / math.max(length - 1, 1)
+        local colorIndex = math.floor(t * (#colors - 1)) + 1
+        local nextIndex = math.clamp(colorIndex + 1, 1, #colors)
+        local ratio = (t * (#colors - 1)) % 1
+
+        local c1, c2 = colors[colorIndex], colors[nextIndex]
+        local r = math.floor((c1.R + (c2.R - c1.R) * ratio) * 255)
+        local g = math.floor((c1.G + (c2.G - c1.G) * ratio) * 255)
+        local b = math.floor((c1.B + (c2.B - c1.B) * ratio) * 255)
+        result ..= string.format('<font color="rgb(%d,%d,%d)">%s</font>', r, g, b, text:sub(i, i))
+    end
+    return result
+end
+
+-- 💖 Gradient: Pink → Ungu → Biru muda
+local galaxyGradient = { 
+Color3.fromRGB(180,0,255), Color3.fromRGB(0,255,255)
+}
+
+-- 🪐 Buat Window Utama
+local Window = WindUI:CreateWindow({
+    Title = GradientText("LS Hub Fling Fish It", galaxyGradient),
+    Icon = "crown",
+    Author = "made by @louissxe",
+    Folder = "LS Hub Fling Fish It",
+    Size = UDim2.fromOffset(460, 290),
+    MinSize = Vector2.new(460, 290),
+    MaxSize = Vector2.new(850, 560),
+    Transparent = true,
+    Theme = "Dark",
+    Resizable = true,
+    SideBarWidth = 200,
+    ToggleKey = Enum.KeyCode.G,
+    BackgroundImageTransparency = 0.42,
+    HideSearchBar = true,
+    ScrollBarEnabled = false,
+    User = {
+        Enabled = true,
+        Anonymous = true,
+        Callback = function()
+            print("User clicked!")
+        end,
+    }
+})
+
+-- 🔊 Suara notifikasi saat UI muncul
+local SoundService = game:GetService("SoundService")
+local NOTIF_SOUND_ID = "rbxassetid://6026984224" -- efek klik bawaan Roblox
+
+local function playNotification()
+    local old = SoundService:FindFirstChild("VoidHub_Notification")
+    if old then old:Destroy() end
+
+    local notif = Instance.new("Sound")
+    notif.Name = "VoidHub_Notification"
+    notif.SoundId = NOTIF_SOUND_ID
+    notif.Volume = 3
+    notif.PlayOnRemove = true
+    notif.Parent = SoundService
+    notif:Destroy()
+end
+
+playNotification()
+
+-- 🔔 Notifikasi saat UI terbuka
+WindUI:Notify({
+    Title = GradientText("Welcome To LS Hub Galaxy", galaxyGradient),
+    Content = "Welcome back, explorer!",
+    Duration = 4
+})
+
+
+local Players = game:GetService("Players")
+local LocalPlayer = Players.LocalPlayer
+local RunService = game:GetService("RunService")
+local Camera = workspace.CurrentCamera
+
+local flingTarget = nil
+local spectating = false
+local flingActive = false
+local flingConn = nil
+local spectateConn = nil
+
+-- 🌀 Tab Fling
+local FlingTab = Window:Tab({
+    Title = GradientText("Fling Player", galaxyGradient),
+    Icon = "user-x",
+})
+
+-- 🧍 Fungsi ambil daftar player
+local function GetPlayerNames()
+    local names = {}
+    for _, player in pairs(Players:GetPlayers()) do
+        if player ~= LocalPlayer then
+            table.insert(names, player.Name)
+        end
+    end
+    return names
+end
+
+-- 🧩 Dropdown pilih player
+local playerDropdown = FlingTab:Dropdown({
+    Title = GradientText("List", galaxyGradient),
+    Values = GetPlayerNames(),
+    Default = nil,
+    Callback = function(value)
+        flingTarget = Players:FindFirstChild(value)
+        print("Target dipilih:", value)
+    end,
+})
+
+-- 🔁 Tombol refresh
+FlingTab:Button({
+    Title = GradientText("Refresh", galaxyGradient),
+    Callback = function()
+        playerDropdown:SetValues(GetPlayerNames())
+        print("Daftar player diperbarui.")
+    end,
+})
+
+-- 👁️ Toggle Spectate Player
+FlingTab:Toggle({
+    Title = GradientText("Spectate", galaxyGradient),
+    Default = false,
+    Callback = function(value)
+        spectating = value
+        if spectateConn then
+            spectateConn:Disconnect()
+            spectateConn = nil
+        end
+        if spectating then
+            spectateConn = RunService.RenderStepped:Connect(function()
+                if flingTarget and flingTarget.Character and flingTarget.Character:FindFirstChild("Humanoid") then
+                    Camera.CameraSubject = flingTarget.Character.Humanoid
+                else
+                    Camera.CameraSubject = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid")
+                end
+            end)
+            print("🎥 Spectate ON")
+        else
+            Camera.CameraSubject = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid")
+            print("🚫 Spectate OFF")
+        end
+    end,
+})
+
+local flingActive = false
+local flingConn = nil
+local bv = nil
+local originalCFrame = nil
+local originalVehicleCFrame = nil
+local tickOffset = 0
+
+-- Fungsi paksa balik posisi kapal + karakter
+local function forceResetPosition(vehicleModel, hrp, originalVehicleCFrame, originalCFrame)
+    if vehicleModel and originalVehicleCFrame then
+        for i = 1, 5 do
+            vehicleModel:SetPrimaryPartCFrame(originalVehicleCFrame)
+            task.wait(0.05)
+        end
+    end
+
+    if hrp and originalCFrame then
+        for i = 1, 5 do
+            hrp.CFrame = originalCFrame
+            task.wait(0.05)
+        end
+    end
+end
+
+-- Toggle Fling
+FlingTab:Toggle({
+    Title = GradientText("Fling", galaxyGradient),
+    Default = false,
+    Callback = function(value)
+        flingActive = value
+        local myChar = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
+        local myHRP = myChar:FindFirstChild("HumanoidRootPart")
+        local myHumanoid = myChar:FindFirstChild("Humanoid")
+        if not myHRP or not myHumanoid then return warn("Tidak menemukan HumanoidRootPart atau Humanoid!") end
+
+        -- Cek kapal
+        local vehicleModel = nil
+        if myHumanoid.SeatPart then
+            vehicleModel = myHumanoid.SeatPart:FindFirstAncestorOfClass("Model")
+        end
+        if not vehicleModel then
+            warn("Naik kapal dulu sebelum Fling!")
+            flingActive = false
+            return
+        end
+
+        -- Stop fling lama
+        if flingConn then flingConn:Disconnect() flingConn = nil end
+        if bv then bv:Destroy() bv = nil end
+
+        if flingActive then
+            if not flingTarget or not flingTarget.Character or not flingTarget.Character:FindFirstChild("HumanoidRootPart") then
+                warn("Pilih target dulu!")
+                flingActive = false
+                return
+            end
+
+            local targetHRP = flingTarget.Character.HumanoidRootPart
+            originalCFrame = myHRP.CFrame
+            originalVehicleCFrame = vehicleModel.PrimaryPart.CFrame
+
+            -- Pastikan karakter duduk / menempel di kapal
+            myHumanoid.Sit = true
+            task.wait(0.1) -- tunggu physics update
+
+            -- BodyVelocity untuk karakter
+            bv = Instance.new("BodyVelocity")
+            bv.MaxForce = Vector3.new(math.huge, math.huge, math.huge)
+            bv.Velocity = Vector3.new(0,0,0)
+            bv.Parent = myHRP
+
+            tickOffset = 0
+            flingConn = RunService.Heartbeat:Connect(function(dt)
+                if not flingTarget or not flingTarget.Character or not flingTarget.Character:FindFirstChild("HumanoidRootPart") then return end
+                tickOffset = tickOffset + dt * 1000
+
+                local yOffset = math.sin(tickOffset * 1000) * 1
+                local xOffset = math.random(-1,1)
+                local zOffset = math.random(-1,1)
+
+                local targetPos = targetHRP.Position + Vector3.new(xOffset, 1 + yOffset, zOffset)
+
+                -- Update posisi kapal + karakter
+                if vehicleModel.PrimaryPart then
+                    vehicleModel:SetPrimaryPartCFrame(CFrame.new(targetPos))
+                end
+
+                -- BodyVelocity arah target untuk karakter
+                local direction = (targetHRP.Position - myHRP.Position).unit
+                bv.Velocity = direction * 100
+            end)
+
+            print("Fling ON + Kapal + Karakter aktif")
+        else
+            -- Stop fling
+            if flingConn then flingConn:Disconnect() flingConn = nil end
+            if bv then bv:Destroy() bv = nil end
+
+            -- Paksa balik ke posisi awal kapal + karakter
+            forceResetPosition(vehicleModel, myHRP, originalVehicleCFrame, originalCFrame)
+
+            -- Pastikan karakter duduk / stabil
+            myHumanoid.Sit = true
+            print("Fling OFF, kapal + karakter kembali ke posisi semula")
+        end
+    end,
+})
+
+-- 🌐 Tab Server (Tanpa HTTP)
+local ServerTab = Window:Tab({
+    Title = GradientText("Server", galaxyGradient),
+    Icon = "server",
+})
+
+local TeleportService = game:GetService("TeleportService")
+local LocalPlayer = game.Players.LocalPlayer
+
+-- 🔁 Server hop acak (selain current server)
+local function SafeServerHop()
+    WindUI:Notify({
+        Title = GradientText("Server Hop", galaxyGradient),
+        Content = "🔍 Mencari server lain...",
+        Duration = 3
+    })
+
+    task.wait(1)
+    local ok, result = pcall(function()
+        return TeleportService:Teleport(game.PlaceId, LocalPlayer)
+    end)
+
+    if not ok then
+        WindUI:Notify({
+            Title = GradientText("Server Hop", galaxyGradient),
+            Content = "⚠️ Gagal pindah server (mungkin tidak ada server lain).",
+            Duration = 4
+        })
+    else
+        WindUI:Notify({
+            Title = GradientText("Server Hop", galaxyGradient),
+            Content = "✅ Berhasil pindah server!",
+            Duration = 2
+        })
+    end
+end
+
+-- 🔘 Tombol utama
+ServerTab:Button({
+    Title = GradientText("Join New Server", galaxyGradient),
+    Desc = "Pindah ke server lain secara otomatis (tanpa lag)",
+    Callback = function()
+        task.spawn(SafeServerHop)
+    end,
+})
