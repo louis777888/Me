@@ -1,0 +1,708 @@
+-- 🚀 Load WindUI versi terbaru
+local WindUI = loadstring(game:HttpGet("https://github.com/Footagesus/WindUI/releases/latest/download/main.lua"))()
+
+-- 🌈 Fungsi teks gradient (3 warna lembut)
+local function GradientText(text, colors)
+    local result = ""
+    local length = #text
+    for i = 1, length do
+        local t = (i - 1) / math.max(length - 1, 1)
+        local colorIndex = math.floor(t * (#colors - 1)) + 1
+        local nextIndex = math.clamp(colorIndex + 1, 1, #colors)
+        local ratio = (t * (#colors - 1)) % 1
+
+        local c1, c2 = colors[colorIndex], colors[nextIndex]
+        local r = math.floor((c1.R + (c2.R - c1.R) * ratio) * 255)
+        local g = math.floor((c1.G + (c2.G - c1.G) * ratio) * 255)
+        local b = math.floor((c1.B + (c2.B - c1.B) * ratio) * 255)
+        result ..= string.format('<font color="rgb(%d,%d,%d)">%s</font>', r, g, b, text:sub(i, i))
+    end
+    return result
+end
+
+-- 💖 Gradient: Pink → Ungu → Biru muda
+local galaxyGradient = { 
+Color3.fromRGB(180,0,255), Color3.fromRGB(0,255,255)
+}
+
+-- 🪐 Buat Window Utama
+local Window = WindUI:CreateWindow({
+    Title = GradientText("LS Hub - VIP", galaxyGradient),
+    Icon = "crown",
+    Author = "made by @louissxe",
+    Folder = "LS Hub - VIP",
+    Size = UDim2.fromOffset(460, 290),
+    MinSize = Vector2.new(460, 290),
+    MaxSize = Vector2.new(850, 560),
+    Transparent = true,
+    Theme = "Light",
+    Resizable = true,
+    SideBarWidth = 200,
+    ToggleKey = Enum.KeyCode.G,
+    BackgroundImageTransparency = 0.42,
+    HideSearchBar = true,
+    ScrollBarEnabled = false,
+    User = {
+        Enabled = true,
+        Anonymous = true,
+        Callback = function()
+            print("User clicked!")
+        end,
+    }
+})
+
+-- 🔊 Suara notifikasi saat UI muncul
+local SoundService = game:GetService("SoundService")
+local NOTIF_SOUND_ID = "rbxassetid://6026984224" -- efek klik bawaan Roblox
+
+local function playNotification()
+    local old = SoundService:FindFirstChild("VoidHub_Notification")
+    if old then old:Destroy() end
+
+    local notif = Instance.new("Sound")
+    notif.Name = "VoidHub_Notification"
+    notif.SoundId = NOTIF_SOUND_ID
+    notif.Volume = 3
+    notif.PlayOnRemove = true
+    notif.Parent = SoundService
+    notif:Destroy()
+end
+
+playNotification()
+
+-- 🔔 Notifikasi saat UI terbuka
+WindUI:Notify({
+    Title = GradientText("Welcome To LS Hub Galaxy", galaxyGradient),
+    Content = "Welcome back, explorer!",
+    Duration = 4
+})
+
+
+-- 🏠 TAB HOME
+local HomeTab = Window:Tab({
+    Title = GradientText("Home", galaxyGradient),
+    Icon = "house",
+})
+
+HomeTab:Paragraph({
+    Title = GradientText("Welcome To LS Hub", galaxyGradient),
+    Desc = "UI with a cosmic black & white galaxy theme",
+})
+
+-- 📰 Changelog / Update Info
+HomeTab:Paragraph({
+    Title = GradientText("Information", galaxyGradient),
+    Desc = "✅ Ring Part Lebih Power Full\n" ..
+           "✅ Fling  Player Fish it\n "..
+           "✅ Auto Walk  YaHaYuk\n" ..
+           "✅ UI performa meningkat 40%",
+})
+
+-- ▶️ Tiktok Showcase
+HomeTab:Button({
+    Title = GradientText("TikTok Showcase", galaxyGradient),
+    Desc = "Lihat demo LS Hub on TikTok",
+    Callback = function()
+        pcall(function()
+            setclipboard("https://youtube.com/@lsxvoid")
+            print("TikTok link copied!")
+        end)
+    end,
+})
+
+-- 💫 RING PART TAB (Full logic ported from your old script)
+local RingTab = Window:Tab({
+    Title = GradientText("Ring Part", galaxyGradient),
+    Icon = "rotate-3d",
+})
+
+-- Services & player refs
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local PhysicsService = game:GetService("PhysicsService")
+local workspace = workspace
+local LocalPlayer = Players.LocalPlayer
+
+-- Ensure collision group exists
+pcall(function() PhysicsService:CreateCollisionGroup("OrbitParts") end)
+pcall(function() PhysicsService:CollisionGroupSetCollidable("OrbitParts", "Default", false) end)
+pcall(function() PhysicsService:CollisionGroupSetCollidable("OrbitParts", "OrbitParts", false) end)
+
+-- ======= State (copied names to keep parity) =======
+local scanRadius = 1000
+local orbitRadius = 100
+local orbitSpeed = 10
+local vibrateStrength = 5
+local vibrateSpeed = 50
+local vibrateAxis = "All"
+local orbitMode = "Horizontal"
+
+local partsList = {}
+local originalProps = {}
+local selectedParts = {}
+local basePositions = {}
+local ringEnabled = false
+
+local countLabelText = "" -- will be updated in UI notifications
+
+-- HRP safety
+local HRP
+local function refreshHRP()
+    local char = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
+    HRP = char:WaitForChild("HumanoidRootPart")
+end
+refreshHRP()
+LocalPlayer.CharacterAdded:Connect(refreshHRP)
+local function getHRP()
+    if HRP and HRP.Parent then return HRP end
+    refreshHRP(); return HRP
+end
+
+-- helpers: try set collision group (robust)
+local function trySetCollisionGroup(part, group)
+    pcall(function()
+        if PhysicsService and PhysicsService.SetPartCollisionGroup then
+            PhysicsService:SetPartCollisionGroup(part, group)
+        else
+            pcall(function() part.CollisionGroup = group end)
+        end
+    end)
+end
+
+local function breakAllConstraints(part)
+    if not part or not part.Parent then return end
+    local model = part:FindFirstAncestorWhichIsA("Model")
+    if model and model:FindFirstChildOfClass("Humanoid") then return end
+    if part:FindFirstAncestorWhichIsA("Accessory") then return end
+    local nuke = {"Weld","WeldConstraint","Motor6D","BallSocketConstraint","HingeConstraint",
+        "CylinderConstraint","PrismaticConstraint","RopeConstraint","SpringConstraint",
+        "RodConstraint","Glue","ManualWeld","Snap"}
+    for _, ch in ipairs(part:GetChildren()) do
+        if table.find(nuke, ch.ClassName) then
+            pcall(function() ch:Destroy() end)
+        end
+    end
+end
+
+-- scanParts (same logic, cap & filtering)
+local function scanParts(radius)
+    partsList = {}
+    originalProps = {}
+
+    local hrp = getHRP()
+    if not hrp then return 0 end
+
+    local candidates = {}
+    for _, obj in ipairs(workspace:GetDescendants()) do
+        if obj:IsA("BasePart") and not obj.Anchored and obj.Parent then
+            local model = obj:FindFirstAncestorWhichIsA("Model")
+            local isPlayerItem = (model and model:FindFirstChildOfClass("Humanoid")) or obj:FindFirstAncestorWhichIsA("Accessory")
+            if not isPlayerItem then
+                local ok, dist = pcall(function() return (obj.Position - hrp.Position).Magnitude end)
+                if ok and dist and dist <= radius then
+                    candidates[#candidates+1] = {part=obj, d=dist}
+                end
+            end
+        end
+    end
+
+    table.sort(candidates, function(a,b) return a.d < b.d end)
+    local CAP = 140
+    for i = 1, math.min(#candidates, CAP) do
+        local p = candidates[i].part
+        local cpp, massless, colGroup, canTouch, canQuery
+        pcall(function() cpp = p.CustomPhysicalProperties end)
+        pcall(function() massless = p.Massless end)
+        local okCol, col = pcall(function() return p.CollisionGroup end)
+        if okCol then colGroup = col end
+        pcall(function() canTouch = p.CanTouch end)
+        pcall(function() canQuery = p.CanQuery end)
+
+        partsList[#partsList+1] = p
+        originalProps[p] = {
+            CanCollide = p.CanCollide,
+            CustomPhysicalProperties = cpp,
+            CollisionGroup = (colGroup ~= nil and colGroup) or "Default",
+            Massless = massless,
+            CanTouch = canTouch,
+            CanQuery = canQuery,
+            OrigPosition = p.Position,
+        }
+    end
+    return #partsList
+end
+
+-- preparePartsForOrbit & restoreParts (keep BodyPosition logic)
+local function preparePartsForOrbit()
+    for _, part in ipairs(partsList) do
+        if part and part.Parent and not part.Anchored then
+            breakAllConstraints(part)
+            trySetCollisionGroup(part, "OrbitParts")
+            pcall(function()
+                part.CanCollide = false
+                part.Massless = true
+                part.CanTouch = false
+                part.CanQuery = false
+                part.CustomPhysicalProperties = PhysicalProperties.new(0.05, 0.3, 0.5, 1000, 0)
+            end)
+
+            local bp = part:FindFirstChild("OrbitBP") or Instance.new("BodyPosition")
+            bp.Name = "OrbitBP"
+            bp.MaxForce = Vector3.new(1e9,1e9,1e9)
+            bp.P = 1000000
+            bp.D = 8000
+            bp.Parent = part
+        end
+    end
+end
+
+local function restoreParts()
+    for _, part in ipairs(partsList) do
+        if part and part.Parent then
+            local bp = part:FindFirstChild("OrbitBP")
+            if bp then pcall(function() bp:Destroy() end) end
+            local orig = originalProps[part]
+            if orig then
+                pcall(function()
+                    part.CanCollide = orig.CanCollide
+                    part.Massless = orig.Massless
+                    part.CanTouch = orig.CanTouch
+                    part.CanQuery = orig.CanQuery
+                    part.CustomPhysicalProperties = orig.CustomPhysicalProperties
+                    trySetCollisionGroup(part, orig.CollisionGroup or "Default")
+                end)
+            end
+        end
+    end
+    partsList = {}
+    originalProps = {}
+    basePositions = {}
+end
+
+-- Selection highlight functions
+local function clearHighlights()
+    for _, part in ipairs(selectedParts) do
+        local hl = part:FindFirstChild("SelectionBox")
+        if hl then hl:Destroy() end
+    end
+    selectedParts = {}
+end
+
+local function addHighlight(part)
+    if not part or not part:IsA("BasePart") then return end
+    local hl = Instance.new("SelectionBox")
+    hl.Adornee = part
+    hl.LineThickness = 0.05
+    hl.Color3 = Color3.fromRGB(100, 200, 255)
+    hl.SurfaceColor3 = Color3.fromRGB(0, 180, 255)
+    hl.Parent = part
+end
+
+-- mouse selection (local)
+local mouse = LocalPlayer:GetMouse()
+local selecting = false
+mouse.Button1Down:Connect(function()
+    if selecting then
+        local target = mouse.Target
+        if target and target:IsA("BasePart") and not table.find(selectedParts, target) then
+            table.insert(selectedParts, target)
+            addHighlight(target)
+        end
+    end
+end)
+
+-- cache base positions for vibrate
+local function cacheBasePositions()
+    basePositions = {}
+    for _, part in ipairs(selectedParts) do
+        if part and part.Parent then
+            basePositions[part] = part.Position
+        end
+    end
+end
+
+-- vibrate selected parts (when ringEnabled ON)
+local function vibrateSelectedParts()
+    for _, part in ipairs(selectedParts) do
+        if part and part.Parent and basePositions[part] then
+            local vib = Vector3.zero
+            if vibrateAxis == "X" or vibrateAxis == "All" then
+                vib = vib + Vector3.new(math.sin(tick() * vibrateSpeed) * vibrateStrength, 0, 0)
+            end
+            if vibrateAxis == "Y" or vibrateAxis == "All" then
+                vib = vib + Vector3.new(0, math.sin(tick() * (vibrateSpeed+20)) * vibrateStrength, 0)
+            end
+            if vibrateAxis == "Z" or vibrateAxis == "All" then
+                vib = vib + Vector3.new(0, 0, math.sin(tick() * (vibrateSpeed+40)) * vibrateStrength)
+            end
+
+            local bp = part:FindFirstChild("OrbitBP") or Instance.new("BodyPosition")
+            bp.Name = "OrbitBP"
+            bp.MaxForce = Vector3.new(1e9,1e9,1e9)
+            bp.P = 1000000
+            bp.D = 8000
+            bp.Parent = part
+
+            bp.Position = basePositions[part] + vib
+        end
+    end
+end
+
+-- ensure player not colliding weirdly with OrbitParts
+local function disablePlayerCollision()
+    local char = LocalPlayer.Character
+    if not char then return end
+    for _, v in ipairs(char:GetDescendants()) do
+        if v:IsA("BasePart") then
+            pcall(function() PhysicsService:SetPartCollisionGroup(v, "Default") end)
+            pcall(function() PhysicsService:CollisionGroupSetCollidable("OrbitParts", v.CollisionGroup, false) end)
+        end
+    end
+end
+disablePlayerCollision()
+LocalPlayer.CharacterAdded:Connect(function()
+    task.wait(1)
+    disablePlayerCollision()
+end)
+
+-- Run loop (mirrors old RunService.Stepped loop)
+local theta = 0
+local steppedConn
+local function startRunLoop()
+    if steppedConn and steppedConn.Connected then return end
+    steppedConn = RunService.Stepped:Connect(function(_, dt)
+        if not ringEnabled then return end
+        pcall(function() sethiddenproperty(LocalPlayer, "SimulationRadius", math.huge) end)
+        local hrp = getHRP()
+        if not hrp then return end
+
+        theta += orbitSpeed * dt
+        local center = hrp.Position + Vector3.new(0, 2.5, 0)
+
+        for i, part in ipairs(partsList) do
+            if part and part.Parent and not part.Anchored then
+                local bp = part:FindFirstChild("OrbitBP")
+                if not bp then
+                    bp = Instance.new("BodyPosition")
+                    bp.Name = "OrbitBP"
+                    bp.MaxForce = Vector3.new(1e9, 1e9, 1e9)
+                    bp.P = 1000000
+                    bp.D = 8000
+                    bp.Parent = part
+                end
+
+                local angle = (i / (#partsList > 0 and #partsList or 1)) * (2 * math.pi) + theta
+                local targetPos
+
+                if orbitMode == "Horizontal" then
+                    targetPos = center + Vector3.new(math.cos(angle) * orbitRadius, 0, math.sin(angle) * orbitRadius)
+                elseif orbitMode == "Vertical" then
+                    targetPos = center + Vector3.new(0, math.sin(angle) * orbitRadius, math.cos(angle) * orbitRadius)
+                elseif orbitMode == "Vibrate" then
+                    if not basePositions[part] then basePositions[part] = part.Position end
+                    local vib = Vector3.zero
+                    if vibrateAxis == "X" or vibrateAxis == "All" then
+                        vib += Vector3.new(math.sin(tick() * vibrateSpeed) * vibrateStrength, 0, 0)
+                    end
+                    if vibrateAxis == "Y" or vibrateAxis == "All" then
+                        vib += Vector3.new(0, math.sin(tick() * vibrateSpeed) * vibrateStrength, 0)
+                    end
+                    if vibrateAxis == "Z" or vibrateAxis == "All" then
+                        vib += Vector3.new(0, 0, math.sin(tick() * vibrateSpeed) * vibrateStrength)
+                    end
+                    targetPos = basePositions[part] + vib
+                else
+                    -- fallback to horizontal
+                    targetPos = center + Vector3.new(math.cos(angle) * orbitRadius, 0, math.sin(angle) * orbitRadius)
+                end
+
+                pcall(function() bp.Position = targetPos end)
+            end
+        end
+
+        if #selectedParts > 0 then vibrateSelectedParts() end
+    end)
+end
+
+local function stopRunLoop()
+    if steppedConn then
+        pcall(function() steppedConn:Disconnect() end)
+        steppedConn = nil
+    end
+end
+
+-- ===== WindUI controls (updated for latest WindUI) =====
+
+-- 🔍 Scan
+RingTab:Button({
+    Title = GradientText("Scan Part", galaxyGradient),
+    Desc = "Scan parts di sekitar (exclude player & accessories).",
+    Callback = function()
+        local n = scanParts(scanRadius)
+        countLabelText = "Parts: " .. n
+        WindUI:Notify({
+            Title = GradientText("Scan Selesai", galaxyGradient),
+            Content = countLabelText,
+            Duration = 3,
+            Icon = "check-circle"
+        })
+    end,
+})
+
+-- 🌀 Toggle Ring
+RingTab:Toggle({
+    Title = GradientText("Ring Now", galaxyGradient),
+    Default = false,
+    Callback = function(state)
+        ringEnabled = state
+        if state then
+            preparePartsForOrbit()
+            cacheBasePositions()
+            startRunLoop()
+            WindUI:Notify({
+                Title = GradientText("Ring Aktif", galaxyGradient),
+                Content = "Orbit started.",
+                Duration = 3,
+                Icon = "play-circle"
+            })
+        else
+            restoreParts()
+            stopRunLoop()
+            clearHighlights()
+            WindUI:Notify({
+                Title = GradientText("", galaxyGradient),
+                Content = "Parts restored.",
+                Duration = 3,
+                Icon = "pause-circle"
+            })
+        end
+    end,
+})
+
+-- 📏 Sliders (WindUI v3+)
+RingTab:Slider({
+    Title = GradientText("Scan Radius", galaxyGradient),
+    Step = 10,
+    Value = { Min = 50, Max = 2000, Default = scanRadius },
+    Callback = function(val)
+        scanRadius = math.floor(val)
+    end,
+})
+
+RingTab:Slider({
+    Title = GradientText("Orbit Radius", galaxyGradient),
+    Step = 1,
+    Value = { Min = 0, Max = 1000, Default = orbitRadius },
+    Callback = function(val)
+        orbitRadius = math.floor(val)
+    end,
+})
+
+RingTab:Slider({
+    Title = GradientText("Orbit Speed", galaxyGradient),
+    Step = 1,
+    Value = { Min = 0, Max = 500, Default = orbitSpeed },
+    Callback = function(val)
+        orbitSpeed = val
+    end,
+})
+
+RingTab:Slider({
+    Title = GradientText("Vibrate Strength", galaxyGradient),
+    Step = 1,
+    Value = { Min = 0, Max = 200, Default = vibrateStrength },
+    Callback = function(val)
+        vibrateStrength = math.floor(val)
+    end,
+})
+
+RingTab:Slider({
+    Title = GradientText("Vibrate Speed", galaxyGradient),
+    Step = 1,
+    Value = { Min = 0, Max = 200, Default = vibrateSpeed },
+    Callback = function(val)
+        vibrateSpeed = math.floor(val)
+    end,
+})
+
+-- 🧭 Dropdown (WindUI v2.5+)
+RingTab:Dropdown({
+    Title = GradientText("VibrateAxis", galaxyGradient),
+    Values = { "All", "X", "Y", "Z" },
+    Default = vibrateAxis,
+    Multi = false,
+    Callback = function(val)
+        vibrateAxis = val
+    end,
+})
+
+-- 🔄 Mode Cycle Button
+local modeOptions = { "Horizontal", "Vertical", "Vibrate" }
+local modeIndex = 1
+RingTab:Button({
+    Title = GradientText("Change Mode", galaxyGradient),
+    Desc = "Mode saat ini: " .. orbitMode,
+    Callback = function()
+        modeIndex = modeIndex % #modeOptions + 1
+        orbitMode = modeOptions[modeIndex]
+        WindUI:Notify({
+            Title = GradientText("Mode Diganti", galaxyGradient),
+            Content = "Mode: " .. orbitMode,
+            Duration = 2,
+            Icon = "refresh-cw"
+        })
+    end,
+})
+
+-- 📊 Status Info
+RingTab:Button({
+    Title = GradientText("Status", galaxyGradient),
+    Desc = "Tampilkan jumlah parts & selected parts.",
+    Callback = function()
+        WindUI:Notify({
+            Title = GradientText("Status part", galaxyGradient),
+            Content = ("Scanned: %d parts\nSelected: %d parts\nMode: %s"):format(#partsList, #selectedParts, orbitMode),
+            Duration = 4,
+            Icon = "info"
+        })
+    end,
+})
+
+-- 💬 TAB: Detect Admin
+local DetectTab = Window:Tab({
+    Title = GradientText("Detect Admins", galaxyGradient),
+    Icon = "shield-alert",
+})
+
+-- ====== LOGIKA ======
+local Players = game:GetService("Players")
+local detectedAdmins = {}
+local viewHighlight = false
+local autoScan = false
+
+-- Fungsi cek admin
+local function isAdmin(player)
+    if player.UserId == game.CreatorId then return true end
+    if game.CreatorType == Enum.CreatorType.Group then
+        local ok, rank = pcall(function()
+            return player:GetRankInGroup(game.CreatorId)
+        end)
+        if ok and rank >= 200 then return true end
+    end
+    return false
+end
+
+-- Notifikasi WindUI
+local function showNotification(msg)
+    WindUI:Notify({
+        Title = GradientText("Admin Detector", galaxyGradient),
+        Content = msg,
+        Duration = 4,
+    })
+end
+
+-- Fungsi deteksi admin
+local function detectAdmins()
+    local found = false
+    for _, p in ipairs(Players:GetPlayers()) do
+        if isAdmin(p) then
+            found = true
+            if not detectedAdmins[p.UserId] then
+                detectedAdmins[p.UserId] = true
+                showNotification("⚠️ Admin Terdeteksi: " .. p.Name)
+            end
+            if viewHighlight and p.Character and p.Character:FindFirstChild("HumanoidRootPart") then
+                local hrp = p.Character.HumanoidRootPart
+                if not hrp:FindFirstChild("AdminHighlight") then
+                    local hl = Instance.new("SelectionBox")
+                    hl.Name = "AdminHighlight"
+                    hl.Adornee = hrp
+                    hl.Color3 = Color3.fromRGB(255, 0, 0)
+                    hl.LineThickness = 0.05
+                    hl.Parent = hrp
+                end
+            end
+        end
+    end
+    if not found then
+        showNotification("✅ Aman, tidak ada admin di sini.")
+    end
+end
+
+-- ====== UI ELEMENTS ======
+DetectTab:Paragraph({
+    Title = GradientText("Sistem Deteksi Admin", galaxyGradient),
+    Desc = "Mendeteksi admin yang masuk ke server & menandainya secara otomatis.",
+})
+
+-- Tombol cek manual
+DetectTab:Button({
+    Title = GradientText("Deteksi Manual", galaxyGradient),
+    Desc = "Periksa sekarang juga apakah ada admin di server.",
+    Callback = detectAdmins,
+})
+
+-- Toggle highlight admin
+DetectTab:Toggle({
+    Title = GradientText("Perjelas Ava admin", galaxyGradient),
+    Default = false,
+    Callback = function(state)
+        viewHighlight = state
+        showNotification("Highlight Admin: " .. (state and "ON" or "OFF"))
+        if not state then
+            for _, p in ipairs(Players:GetPlayers()) do
+                if p.Character and p.Character:FindFirstChild("HumanoidRootPart") then
+                    local hl = p.Character.HumanoidRootPart:FindFirstChild("AdminHighlight")
+                    if hl then hl:Destroy() end
+                end
+            end
+        else
+            detectAdmins()
+        end
+    end,
+})
+
+-- Toggle auto scan
+DetectTab:Toggle({
+    Title = GradientText("Auto Deteksi 60s", galaxyGradient),
+    Default = false,
+    Callback = function(state)
+        autoScan = state
+        showNotification("Auto Detect: " .. (state and "ON" or "OFF"))
+    end,
+})
+
+-- Info paragraf
+DetectTab:Paragraph({
+    Title = GradientText("Cara Pakai", galaxyGradient),
+    Desc = [[
+1️⃣ Tekan "Detect Admin (Manual)" untuk memeriksa langsung.
+2️⃣ Aktifkan "Highlight Admin" untuk menandai karakter admin.
+3️⃣ Nyalakan "Auto Detect Admin 60s)" agar mendeteksi otomatis setiap 1 menit.
+    ]],
+})
+
+-- Notifikasi admin join
+Players.PlayerAdded:Connect(function(p)
+    if isAdmin(p) then
+        showNotification("⚠️ Admin baru masuk: " .. p.Name)
+        if viewHighlight then
+            repeat task.wait() until p.Character and p.Character:FindFirstChild("HumanoidRootPart")
+            local hl = Instance.new("SelectionBox")
+            hl.Name = "AdminHighlight"
+            hl.Adornee = p.Character.HumanoidRootPart
+            hl.Color3 = Color3.fromRGB(255, 0, 0)
+            hl.LineThickness = 0.05
+            hl.Parent = p.Character.HumanoidRootPart
+        end
+    end
+end)
+
+-- Loop auto detect tiap 5 detik
+task.spawn(function()
+    while task.wait(60) do
+        if autoScan then
+            detectAdmins()
+        end
+    end
+end)
